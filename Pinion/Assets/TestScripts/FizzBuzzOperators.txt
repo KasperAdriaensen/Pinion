@@ -1,0 +1,25 @@
+Declare(int, $number, 1)
+Declare(string, $result)
+
+While(LessThanOrEqual($number, 100))
+
+	Set($result, "")
+
+	If ($number % 3 == 0)
+		Set($result, Add($result, "Fizz"))
+	EndIf
+
+	If (Equals($number % 5, 0))
+		Set($result, Add($result, "Buzz"))
+	EndIf
+
+	If (IsEmptyString($result))
+		Set($result, ToString($number))
+	EndIf
+
+	Log($result)
+
+	Set($number, Add($number, 1))
+	
+EndWhile
+

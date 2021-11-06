@@ -1,0 +1,194 @@
+//BEGIN_META
+//scheduling:Update
+//loop:EveryTime
+//END_META
+
+Declare(int, $testValue, -1)
+Declare(int, $output, -1)
+
+
+
+//
+Set($testValue, 0)
+
+If ($testValue == 0)
+	Set($output, 0)
+EndIf
+
+AssertEquals($output, 0)
+
+//===================================================
+
+Set($testValue, 1)
+
+If ($testValue == 1)
+	Set($output, 1)
+EndIf
+
+AssertEquals($output, 1)
+
+//===================================================
+
+Set($testValue, 3)
+
+If ($testValue == 2)
+	Set($output, 2)
+Else
+	Set($output, 3)
+EndIf
+
+AssertEquals($output, 3)
+
+//===================================================
+
+Set($testValue, 1000)
+
+If ($testValue == 4)
+	Set($output, 4)
+ElseIf ($testValue == 5)
+	Set($output, 5)
+Else
+	Set($output, 6)
+EndIf
+
+AssertEquals($output, 6)
+
+//===================================================
+
+Set($testValue, 6)
+
+If ($testValue == 4)
+	Set($output, 4)
+ElseIf ($testValue == 5)
+	Set($output, 5)
+ElseIf ($testValue == 6)
+	Set($output, 6)
+Else
+	Set($output, 7)
+EndIf
+
+AssertEquals($output, 6)
+
+//===================================================
+
+Set($testValue, 6)
+
+If ($testValue == 4)
+	Set($output, 4)
+Else
+	If($testValue == 6)
+		Set($output, 6)
+	EndIf
+EndIf
+
+AssertEquals($output, 6)
+
+//===================================================
+
+Set($testValue, 10)
+
+If ($testValue == 5)
+	Set($output, 5)
+Else
+	If($testValue == 6)
+		Set($output, 6)
+	Else
+		Set($output, 10)
+	EndIf
+EndIf
+
+AssertEquals($output, 10)
+
+//===================================================
+
+Set($testValue, 12)
+
+If ($testValue == 8)
+	Set($output, 8)
+Else
+	If($testValue == 9)
+		Set($output, 9)
+	ElseIf ($testValue == 11)
+		Set($output, 11)
+	Else 
+		Set($output, 12)
+	EndIf
+EndIf
+
+AssertEquals($output, 12)
+
+//===================================================
+
+Set($testValue, 14)
+
+If ($testValue == 8)
+	Set($output, 8)
+Else
+	If($testValue == 9)
+		Set($output, 9)
+	ElseIf ($testValue == 14)
+		Set($output, 14)
+	Else 
+		Set($output, 12)
+	EndIf
+EndIf
+
+AssertEquals($output, 14)
+
+//===================================================
+
+Set($testValue, 20)
+
+If ($testValue < 10)
+	Set($output, 10)
+ElseIf ($testValue >= 10)
+	Set($output, 20)
+EndIf
+
+AssertEquals($output, 20)
+
+//===================================================
+
+Set($testValue, 20)
+
+If ($testValue < 10)
+	Set($output, 10)
+ElseIf ($testValue >= 12)
+	Set($output, 12)
+ElseIf ($testValue >= 14)
+	Set($output, 14)
+ElseIf ($testValue >= 16)
+	Set($output, 16)
+ElseIf ($testValue >= 18)
+	Set($output, 18)
+ElseIf ($testValue >= 20)
+	Set($output, 20)
+ElseIf ($testValue >= 22)
+	Set($output, 22)
+EndIf
+
+AssertEquals($output, 12)
+
+//===================================================
+
+Set($testValue, 20)
+
+If ($testValue < 10)
+	Set($output, 10)
+ElseIf ($testValue <= 12)
+	Set($output, 12)
+ElseIf ($testValue <= 14)
+	Set($output, 14)
+ElseIf ($testValue <= 16)
+	Set($output, 16)
+ElseIf ($testValue <= 18)
+	Set($output, 18)
+ElseIf ($testValue <= 20)
+	Set($output, 20)
+ElseIf ($testValue <= 22)
+	Set($output, 22)
+EndIf
+
+AssertEquals($output, 20)
+
+//===================================================

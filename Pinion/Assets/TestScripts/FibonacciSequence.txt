@@ -1,0 +1,16 @@
+Declare(int, $previousNumber, 0)
+Declare(int, $currentNumber, 1)
+Declare(int, $output, 1)
+
+DebugOutput(ToString($previousNumber))
+DebugOutput(ToString($currentNumber))
+
+While(LessThanOrEqual($output, 100))
+
+	Set($output, Add($currentNumber, $previousNumber))
+	DebugOutput(ToString($output))
+	Set($previousNumber, $currentNumber)
+	Set($currentNumber, $output)
+
+EndWhile
+

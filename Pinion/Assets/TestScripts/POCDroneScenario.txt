@@ -1,0 +1,25 @@
+#META
+scheduling:Update
+loop:EveryTime
+#END_META
+
+#INIT
+
+Declare(float, $$lowerLimit, 5f)
+Declare(float, $upperLimit, 20f)
+
+#END_INIT
+
+#MAIN
+
+Log($$lowerLimit)
+
+if (GetDroneHeightAbsolute() < $$lowerLimit)
+	DisplayMessage("THE DRONE IS TOO DAMN LOW", "heightwarning")
+elseif (GetDroneHeightAbsolute() > $upperLimit)
+	DisplayMessage("THE DRONE IS TOO DAMN HIGH", "heightwarning")
+else
+	RemoveMessage("heightwarning")
+endif
+
+#END_MAIN

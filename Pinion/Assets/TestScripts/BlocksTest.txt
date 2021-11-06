@@ -1,0 +1,11 @@
+#INIT
+declare(int, $test, 5)
+
+declare(int, $$test, 7)
+#END_INIT
+
+#MAIN
+set($test, 12)
+Log($$test)
+#END_MAIN
+

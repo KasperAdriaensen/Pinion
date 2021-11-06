@@ -1,0 +1,6 @@
+Declare(int, $output, 1)
+
+While(LessThanOrEqual($output, 100))
+	Log(ToString($output))
+	Set($output, Add($output, 1))
+EndWhile
