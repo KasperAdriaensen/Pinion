@@ -162,8 +162,6 @@ namespace Pinion.Compiler.Internal
 				lambdaExpression = Expression.Lambda(bodyVoidPlusReturnNull, targetDelegateUntyped, paramsExpUntyped);
 			}
 
-			Debug.Log(lambdaExpression);
-
 			// Lambda needs to be compiled! This does not come for free, but should only happen once, ideally during some loading stage.
 			return (Func<Delegate, object[], object>)lambdaExpression.Compile();
 		}
