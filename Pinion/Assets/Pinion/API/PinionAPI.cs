@@ -204,12 +204,15 @@ namespace Pinion
 				}
 				catch (System.Exception exception)
 				{
+					overallSuccess = false;
 #if UNITY_EDITOR
+					// Allows double-clicking in the console window to go to the location the exception was thrown. (Only useful inside Unity editor.)
+					// Beyond that, the same information is already relayed by the errorMessageReceiver;
 					Debug.LogException(exception);
-#else
-					if (errorMessageReceiver != null)
-						errorMessageReceiver($"Exception occurred while building API function {instructionType}. Message: {exception.Message}");
 #endif
+					if (errorMessageReceiver != null)
+						errorMessageReceiver($"An exception occurred while building API function {instructionString}. Message: {exception.Message}");
+
 				}
 			}
 
