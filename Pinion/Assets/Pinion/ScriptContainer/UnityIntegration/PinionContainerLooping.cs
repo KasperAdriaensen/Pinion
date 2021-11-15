@@ -28,14 +28,15 @@ namespace Pinion.Unity
 			TimedIntervalUnscaled = 3
 		}
 
+		private const char metaDataSeparator = ':';
+
 		// TODO: Make these configurable
 		private ExecuteScheduling executeScheduling = ExecuteScheduling.InstantOnce;
 		private ExecuteLoop executeLoop = ExecuteLoop.DontLoop;
-		private double loopInterval = 2;
-
-		private double lastExecuteTime = double.NegativeInfinity;       // any timestamp should be > than this value, so first iteration will always run
-		private double lastExecuteTimeFixed = double.NegativeInfinity;  // any timestamp should be > than this value, so first iteration will always run
-		private const char metaDataSeparator = ':';
+		private float loopInterval = 2;
+		private float sleepResumeTime = 0;
+		private float lastExecuteTime = float.NegativeInfinity;       // any timestamp should be > than this value, so first iteration will always run
+		private float lastExecuteTimeFixed = float.NegativeInfinity;  // any timestamp should be > than this value, so first iteration will always run
 
 
 		public override void Run(System.Action<LogType, string> logHandler = null, params System.ValueTuple<string, object>[] externalVariables)
@@ -58,8 +59,8 @@ namespace Pinion.Unity
 			base.Stop();
 			UnityEventCaller.UnbindUpdate(OnUpdate);
 			UnityEventCaller.UnbindFixedUpdate(OnFixedUpdate);
-			lastExecuteTime = double.NegativeInfinity;
-			lastExecuteTimeFixed = double.NegativeInfinity;
+			lastExecuteTime = float.NegativeInfinity;
+			lastExecuteTimeFixed = float.NegativeInfinity;
 		}
 
 		private void OnUpdate()
@@ -205,7 +206,7 @@ namespace Pinion.Unity
 					break;
 
 				case "interval":
-					if (!double.TryParse(value, out loopInterval))
+					if (!float.TryParse(value, out loopInterval))
 					{
 						DisplayError(errorMessageReceiver, $"Could not parse '{value}' to a valid loop interval value.");
 					}
@@ -239,7 +240,14 @@ namespace Pinion.Unity
 
 		private void SleepContinueHandler()
 		{
-			RunInternal();
+			if (Time.time >= sleepResumeTime)
+				RunInternal();
+		}
+
+		public void SleepForTime(float seconds)
+		{
+			sleepResumeTime = Time.time + seconds;
+			Sleep();
 		}
 
 		private void DisplayError(System.Action<string> errorMessageReceiver, string message)

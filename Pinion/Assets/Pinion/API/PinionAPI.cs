@@ -364,7 +364,7 @@ namespace Pinion
 			return instructionLookUpTable[instructionCode];
 		}
 
-		public static bool IsSupportedType(Type type)
+		public static bool IsSupportedPublicType(Type type)
 		{
 			return supportedTypes.Contains(type);
 		}

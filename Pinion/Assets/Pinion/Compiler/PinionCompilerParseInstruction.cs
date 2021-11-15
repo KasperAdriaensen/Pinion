@@ -37,7 +37,13 @@ namespace Pinion.Compiler
 			foreach (InstructionData potentialMatch in instructionMatchBuffer)
 			{
 				int parameterMatchCount = 0;
-				fullMatch = potentialMatch.MatchesArguments(providedArguments, out parameterMatchCount);
+
+				// IsValidForCallingContainer:
+				// Some instructions may require a certain (sub)type of PinionContainer as their first argument.
+				// If the calling container does not match that type or one higher up the inheritance chain, this is not a valid match either.
+				// We check this separately, so that, if no full match was found, we can still output meaningful compiler feedback about this edge case further down.
+
+				fullMatch = potentialMatch.MatchesArguments(providedArguments, out parameterMatchCount) && potentialMatch.IsValidForCallingContainer(targetContainer);
 
 				if (fullMatch)
 				{
@@ -56,7 +62,15 @@ namespace Pinion.Compiler
 			if (!fullMatch)
 			{
 				string errorMessage = string.Empty;
-				if (matchedInstruction == null || matchedInstruction.exposedParameterCount <= 0) // If there are no parameters, we can't generate a more meaningful message.
+				if (matchedInstruction == null) // If not even a partial match, we can't generate a more meaningful message.
+				{
+					errorMessage = $"There is no version of the instruction {instructionString} that accepts the provided arguments.";
+				}
+				else if (!matchedInstruction.IsValidForCallingContainer(targetContainer)) // Check this before other conditions - it could be preventing an otherwise identical parameter list from matching.
+				{
+					errorMessage = $"Instruction {instructionString} is not valid within this script type. It is restricted to a container of type {matchedInstruction.GetExpectedContainerType()}";
+				}
+				else if (matchedInstruction.exposedParameterCount <= 0) // If there are no parameters, we can't generate a more meaningful message. 
 				{
 					errorMessage = $"There is no version of the instruction {instructionString} that accepts the provided arguments.";
 				}

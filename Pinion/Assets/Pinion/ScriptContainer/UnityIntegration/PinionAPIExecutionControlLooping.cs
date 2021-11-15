@@ -4,8 +4,13 @@ using UnityEngine;
 
 namespace Pinion.Unity
 {
-    public static class PinionAPIExecutionControlLooping
-    {
-
-    }
+	[APISource]
+	public static class PinionAPIExecutionControlLooping
+	{
+		[APIMethod]
+		public static void Sleep(PinionContainerLooping container, float seconds)
+		{
+			container.SleepForTime(seconds);
+		}
+	}
 }

@@ -47,13 +47,13 @@ namespace Pinion.Compiler.Internal
 			{
 				Type parameterType = foundParameters[i];
 
-				if (PinionAPI.IsSupportedType(parameterType))
+				if (PinionAPI.IsSupportedPublicType(parameterType)) // No further checks required.
 					continue;
 
-				if (parameterType == typeof(PinionContainer))
+				if (IsTypeOrSubtype(parameterType, typeof(PinionContainer)))
 				{
 					if (i > 0)
-						throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: parameter of type {typeof(PinionContainer)} can only be first parameter. Encountered it at parameter index {i}.");
+						throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: parameter deriving from {typeof(PinionContainer)} can only be first parameter. Encountered it at parameter index {i}.");
 
 					// No longer a requirement. First PinionContainer parameter should now be "hidden" everywhere.
 					// if (internalInstruction == false)
@@ -69,7 +69,7 @@ namespace Pinion.Compiler.Internal
 
 			exposedParamsAmount = firstIsContainer ? foundParameters.Length - 1 : foundParameters.Length;
 
-			if (returnType != typeof(void) && !PinionAPI.IsSupportedType(returnType))
+			if (returnType != typeof(void) && !PinionAPI.IsSupportedPublicType(returnType))
 				throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: API methods must return a supported type. Method returns {returnType}");
 
 			return foundParameters;
@@ -86,13 +86,33 @@ namespace Pinion.Compiler.Internal
 				invoker.Invoke(parameters);
 			}
 		}
-
 		public Type GetParameterType(int parameterIndex)
 		{
 			if (requiresContainer)
 				return parameterTypes[parameterIndex + 1];
 			else
 				return parameterTypes[parameterIndex];
+		}
+
+		public bool IsValidForCallingContainer(PinionContainer callingContainer)
+		{
+			if (callingContainer == null)
+				throw new ArgumentNullException(nameof(callingContainer));
+
+			if (requiresContainer && parameterTypes != null && parameterTypes.Length > 0)
+				return IsTypeOrSubtype(callingContainer.GetType(), parameterTypes[0]);
+
+			return true;
+		}
+
+		public Type GetExpectedContainerType()
+		{
+			return requiresContainer ? parameterTypes[0] : null;
+		}
+
+		private static bool IsTypeOrSubtype(Type inputType, Type compareType)
+		{
+			return inputType == compareType || inputType.IsSubclassOf(compareType);
 		}
 
 		public bool MatchesArguments(IList<Type> providedArgumentTypes, out int matchCount)
