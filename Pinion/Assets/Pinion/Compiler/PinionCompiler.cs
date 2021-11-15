@@ -132,9 +132,6 @@ namespace Pinion.Compiler
 			// Better way to handle this?
 			script = CompilerRewriting.InsertSourceLineNumbers(script);
 
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			Debug.Log("Script after rewriting: " + System.Environment.NewLine + script);
-#endif
 			// Removes any whitespace.
 			// This significantly simplifies any other pattern matching further along.
 			script = CompilerRewriting.RemoveWhitespace(script);
