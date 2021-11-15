@@ -4,7 +4,7 @@ using UnityEngine;
 using Pinion.Utility;
 using System.IO;
 
-namespace Pinion
+namespace Pinion.Unity
 {
 	public class PinionContainerLooping : PinionContainer
 	{
