@@ -15,7 +15,7 @@ namespace Pinion
 		}
 
 		[APIMethod]
-		public static void EndScript(PinionContainer container)
+		public static void Stop(PinionContainer container)
 		{
 			container.Stop();
 		}

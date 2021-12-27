@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Pinion.Compiler.Internal;
 using UnityEngine;
@@ -81,7 +82,7 @@ namespace Pinion.Compiler
 			{
 				int result = 0;
 
-				if (!int.TryParse(literal, out result))
+				if (!int.TryParse(literal, NumberStyles.Integer, CultureInfo.InvariantCulture, out result))
 				{
 					AddCompileError($"Could not interpret \"{literal}\" as an int.");
 					return null;
@@ -111,7 +112,7 @@ namespace Pinion.Compiler
 				literal = literal.Trim('f');
 				float result = 0f;
 
-				if (!float.TryParse(literal, out result))
+				if (!float.TryParse(literal, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
 				{
 					AddCompileError($"Could not interpret \"{literal}\" as a float.");
 					return null;

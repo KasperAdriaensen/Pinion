@@ -9,11 +9,20 @@ namespace Pinion
 {
 	public class PinionContainer
 	{
+		// We don't define a "ran to completion" flag because what that  means exactly could depend a lot
+		// on the exact implementation. Better to implement it there, as needed and as fits the purpose.
+		public enum InternalState
+		{
+			None = 0,
+			Initialized = 1,
+			Executing = 2,
+			Sleeping = 4,
+		}
 		public const int executionTimeoutMs = 3000; // Could easily be made configurable in the future.
 
 		// TODO This should probably not be editable.
 		public List<ushort> scriptInstructions = new List<ushort>();
-
+		public InternalState StateFlags { get { return stateFlags; } }
 		public int CurrentInstructionIndex
 		{
 			get { return currentInstructionIndex; }
@@ -39,9 +48,9 @@ namespace Pinion
 
 		private Stack<object> stack = new Stack<object>();
 		private Stack<int> jumpLocationStack = new Stack<int>();
-		private bool initialized = false;
 		private int currentInstructionIndex = 0;
 		private Stopwatch executeStopwatch = new Stopwatch();
+		private InternalState stateFlags = InternalState.None;
 
 		public virtual void Run(System.Action<LogType, string> logHandler = null, params System.ValueTuple<string, object>[] externalVariables)
 		{
@@ -60,8 +69,11 @@ namespace Pinion
 
 			// if running this script for the first time, we initialize all container-scope variables
 			// on any subsequent runs, we skip this step so they retain their values
-			currentInstructionIndex = initialized ? mainBlockStartIndex : 0;
-			initialized = true;
+			currentInstructionIndex = HasStateFlag(InternalState.Initialized) ? mainBlockStartIndex : 0;
+
+			SetStateFlag(InternalState.Initialized);
+			SetStateFlag(InternalState.Executing);
+			RemoveStateFlag(InternalState.Sleeping);
 
 			if (resumeIndex >= 0)
 			{
@@ -72,7 +84,7 @@ namespace Pinion
 
 			// API functions can and will alter the current instruction index through the CurrentInstructionIndex property.
 			// This happens by design, so that functions can skip/goto/conditionally branch, ... or get data from the bytecode itself, e.g. in the case of reading from a register.
-			// Hence the funky for loop below without initialization.
+			// Hence the funky for-loop below without initialization.
 
 			for (; currentInstructionIndex < instructionCount; currentInstructionIndex++)
 			{
@@ -92,6 +104,9 @@ namespace Pinion
 			}
 
 			executeStopwatch.Stop();
+
+			if (!HasStateFlag(InternalState.Sleeping))
+				RemoveStateFlag(InternalState.Executing);
 		}
 
 		public void Log(string message)
@@ -205,11 +220,12 @@ namespace Pinion
 
 		public virtual void Stop()
 		{
-			initialized = false;
+			RemoveStateFlag(InternalState.Initialized);
 		}
 
 		public void Sleep()
 		{
+			SetStateFlag(InternalState.Sleeping);
 			resumeIndex = CurrentInstructionIndex + 1;
 			OnSleep();
 		}
@@ -240,11 +256,24 @@ namespace Pinion
 			stringRegister.StoreExternalVariables(externalVariables);
 		}
 
-
-
 		public virtual void ParseMetaData(string metaData, System.Action<string> errorMessageReceiver)
 		{
 
+		}
+
+		public bool HasStateFlag(InternalState state)
+		{
+			return (stateFlags & state) == state;
+		}
+
+		protected void SetStateFlag(InternalState state)
+		{
+			stateFlags |= state;
+		}
+
+		protected void RemoveStateFlag(InternalState state)
+		{
+			stateFlags &= ~state;
 		}
 	}
 }

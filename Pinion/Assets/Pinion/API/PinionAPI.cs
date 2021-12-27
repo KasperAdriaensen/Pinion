@@ -14,9 +14,8 @@ namespace Pinion
 	public static partial class PinionAPI
 	{
 		/* NOMENCLATURE =====================================
-		In the code below, there's quite a bit of switching between representing the instruction as an enum value, string, ushort...
-		For clarity's sake, the code below aims to use this naming as consistently as possible:
-		* enum value 	-> "instruction"
+		In the code below, there's quite a bit of switching between representing the instruction as a string, ushort...
+		For clarity's sake, the code below aims to use the following naming as consistently as possible:
 		* ushort 		-> "instruction code" / "code"
 		* string 		-> "instruction string" / "string"
 		*/
@@ -30,7 +29,6 @@ namespace Pinion
 		private static Dictionary<string, List<InstructionData>> instructionStringsLookup = new Dictionary<string, List<InstructionData>>();
 		private static Dictionary<string, InstructionData> internalIdentifierLookup = new Dictionary<string, InstructionData>();
 		private static object[] instructionParametersReuse = new object[MaxParameterCount];
-
 
 		public const string InternalIDReadInt = "InternalReadInt";
 		public const string InternalIDReadFloat = "InternalReadFloat";
@@ -72,31 +70,6 @@ namespace Pinion
 			typeof(string),
 		};
 
-		private static IEnumerable<MethodInfo> GetAllAPISourceMethods()
-		{
-			BindingFlags methodBindingFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-
-			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-			{
-				// This could be expanded or made less restrictive if need be.
-				// For our current purposes however, this is perfectly fine. Saves iterating over a whole bunch of types that couldn't possibly have our own custom attribute anyway.
-				if (assembly.GetName().Name != "Assembly-CSharp")
-					continue;
-
-				foreach (Type type in assembly.GetTypes())
-				{
-					// only includes classes marked as APISource
-					if (type.GetCustomAttribute(typeof(APISourceAttribute), false) == null)
-						continue;
-
-					foreach (MethodInfo methodInfo in type.GetMethods(methodBindingFlags))
-					{
-						yield return methodInfo;
-					}
-				}
-			}
-		}
-
 		public static bool BuildAPI(System.Action<string> errorMessageReceiver)
 		{
 			if (alreadyBuilt)
@@ -105,14 +78,14 @@ namespace Pinion
 			instructionStringsLookup.Clear();
 			internalIdentifierLookup.Clear();
 
-			// Returns all methods from functions marked with the APISource attribute.
-			IEnumerable<MethodInfo> allMethodsInAPISources = GetAllAPISourceMethods();
+			// Returns all methods marked with [APIMethod] from all classes marked with [APISource].
+			IEnumerable<(APIMethodAttribute, MethodInfo)> allAPIMethods = GetAllAPIMethods();
 
 			bool overallSuccess = true;
 			ushort currentInstructionCode = firstCustomInstructionCode;
 			List<InstructionData> builtInstructions = new List<InstructionData>();
 
-			foreach (MethodInfo methodInSource in allMethodsInAPISources)
+			foreach ((APIMethodAttribute, MethodInfo) methodInSource in allAPIMethods)
 			{
 				// if we've failed to build an instruction, no point continuing with the rest
 				if (overallSuccess == false)
@@ -120,12 +93,10 @@ namespace Pinion
 
 				// NOTE: we could also adapt GetAllAPIFunctions() to only return functions marked with the APIFunction attribute.
 				// But we need access to data inside that attribute anyway, so we might as well do it here.
-				APIMethodAttribute methodAttribute = methodInSource.GetCustomAttribute(typeof(APIMethodAttribute), false) as APIMethodAttribute;
+				APIMethodAttribute methodAttribute = methodInSource.Item1;
+				MethodInfo methodInfo = methodInSource.Item2;
+				string instructionString = methodInfo.Name;
 
-				if (methodAttribute == null) // not an API method
-					continue;
-
-				string instructionString = methodInSource.Name;
 				InstructionData instructionData = null;
 
 				try
@@ -134,7 +105,7 @@ namespace Pinion
 					if (reservedInstructionStrings.Contains(instructionString))
 						throw new PinionAPIException($"'{instructionString}' is a reserved instruction string. Cannot define an API call with this name.");
 
-					instructionData = new InstructionData(currentInstructionCode, methodInSource, methodAttribute.HasFlag(APIMethodFlags.Internal));
+					instructionData = new InstructionData(currentInstructionCode, methodInfo, methodAttribute.HasFlag(APIMethodFlags.Internal));
 
 					if (instructionData == null)
 					{
@@ -159,7 +130,7 @@ namespace Pinion
 							if (data.internalInstruction != currentInstructionInternal)
 							{
 								overallSuccess = false;
-								throw new PinionAPIException($"Instruction '{methodInSource.Name}' could not be generated. The name '{methodInSource.Name}' is reserved for an internal instruction.");
+								throw new PinionAPIException($"Instruction '{instructionString}' could not be generated. The name '{instructionString}' is reserved for an internal instruction.");
 							}
 						}
 
@@ -181,7 +152,7 @@ namespace Pinion
 					if (methodAttribute.HasFlag(APIMethodFlags.Internal))
 					{
 						APIInternalMethodIdentifierAttribute methodIdentifier =
-							methodInSource.GetCustomAttribute(typeof(APIInternalMethodIdentifierAttribute), false) as APIInternalMethodIdentifierAttribute;
+							methodInfo.GetCustomAttribute(typeof(APIInternalMethodIdentifierAttribute), false) as APIInternalMethodIdentifierAttribute;
 
 						if (methodIdentifier != null)
 						{
@@ -194,7 +165,7 @@ namespace Pinion
 							else
 							{
 								overallSuccess = false;
-								throw new PinionAPIException($"Internal methods {internalIdentifierLookup[identifier].instructionString} and {methodInSource.Name} are assigned the same identifier ({identifier})!");
+								throw new PinionAPIException($"Internal methods {internalIdentifierLookup[identifier].instructionString} and {instructionString} are assigned the same identifier ({identifier})!");
 							}
 						}
 					}
@@ -293,6 +264,99 @@ namespace Pinion
 			// However, since the delegate creation logic also hardcodes the number of parameters to read, we don't need to worry about passing the correct number of arguments.
 			// Barring unforeseen bugs, it can only ever read the correct indices/amount. Indices beyond that are ignored.
 			compileData.Call(callingContainer, instructionParametersReuse);
+		}
+
+		private static IEnumerable<Type> GetAllAPISources()
+		{
+			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+			{
+				// This could be expanded or made less restrictive if need be.
+				// For our current purposes however, this is perfectly fine. Saves iterating over a whole bunch of types that couldn't possibly have our own custom attribute anyway.
+				if (assembly.GetName().Name != "Assembly-CSharp")
+					continue;
+
+				foreach (Type type in assembly.GetTypes())
+				{
+					// only includes classes marked as APISource
+					if (type.GetCustomAttribute(typeof(APISourceAttribute), false) != null)
+						yield return type;
+				}
+			}
+		}
+
+		private static IEnumerable<(APIMethodAttribute, MethodInfo)> GetAllAPIMethodsInSource(Type targetType)
+		{
+			BindingFlags methodBindingFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
+			foreach (MethodInfo methodInfo in targetType.GetMethods(methodBindingFlags))
+			{
+				APIMethodAttribute methodAttribute = methodInfo.GetCustomAttribute(typeof(APIMethodAttribute), false) as APIMethodAttribute;
+
+				if (methodAttribute != null)
+					yield return (methodAttribute, methodInfo);
+			}
+		}
+
+		private static IEnumerable<(APIMethodAttribute, MethodInfo)> GetAllAPIMethods()
+		{
+			foreach (Type sourceType in GetAllAPISources())
+			{
+				foreach ((APIMethodAttribute, MethodInfo) apiMethod in GetAllAPIMethodsInSource(sourceType))
+				{
+					yield return apiMethod;
+				}
+			}
+		}
+
+		private static IEnumerable<MethodInfo> GetAllAPIResettersInSource(Type targetType)
+		{
+			BindingFlags methodBindingFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
+			foreach (MethodInfo methodInfo in targetType.GetMethods(methodBindingFlags))
+			{
+				APIResetAttribute methodAttribute = methodInfo.GetCustomAttribute(typeof(APIResetAttribute), false) as APIResetAttribute;
+
+				if (methodAttribute != null)
+					yield return methodInfo;
+			}
+		}
+
+		public static void ResetAPISources()
+		{
+			foreach (Type sourceType in GetAllAPISources())
+			{
+				foreach (MethodInfo resetter in GetAllAPIResettersInSource(sourceType))
+				{
+					resetter.Invoke(null, null);
+				}
+			}
+		}
+
+		public static void StoreAllAPISources(List<Type> store)
+		{
+			if (store == null)
+				throw new ArgumentNullException(nameof(store));
+
+			store.AddRange(GetAllAPISources());
+		}
+
+		public static void StoreAPIMethodsForSource(Type source, List<(APIMethodAttribute, MethodInfo)> store)
+		{
+			if (store == null)
+				throw new ArgumentNullException(nameof(store));
+
+			if (source == null)
+				throw new ArgumentNullException(nameof(source));
+
+			store.AddRange(GetAllAPIMethodsInSource(source));
+		}
+
+		public static void StoreAllAPIMethods(List<(APIMethodAttribute, MethodInfo)> store)
+		{
+			if (store == null)
+				throw new ArgumentNullException(nameof(store));
+
+			store.AddRange(GetAllAPIMethods());
 		}
 
 		public static void GetMatchingInstructions(string instructionString, IList<InstructionData> matchStorage, bool allowInternal = false)

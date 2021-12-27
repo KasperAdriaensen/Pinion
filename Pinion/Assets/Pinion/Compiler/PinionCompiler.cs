@@ -18,6 +18,7 @@ namespace Pinion.Compiler
 			InitBlock = 1,
 			MainBlock = 2,
 			FunctionBlock = 3,
+			MetaBlock = 4
 		}
 
 		public static ScriptBlock CurrentBlockContext
@@ -61,7 +62,7 @@ namespace Pinion.Compiler
 			// Meta block contains free-form information. If present, it is passed to the script container of type T.
 			// Type T is free to decide how to use this data (e.g. parse it for initialization).
 			// Beyond this point, meta block has been removed from the script.
-			string metaBlock = IsolateMetaBlock(script, out script);
+			string metaBlock = ReadMetaBlock(script);
 
 			if (!compileSuccess) // Parsing meta block could spawn an error. Don't bother beyond this point.
 				return null;
@@ -95,13 +96,10 @@ namespace Pinion.Compiler
 			}
 		}
 
-		private static string IsolateMetaBlock(string scriptIn, out string scriptOut)
+		private static string ReadMetaBlock(string scriptIn)
 		{
-			scriptOut = scriptIn;
 			string metaBlock = null;
-
 			MatchCollection metaBlockMatches = Regex.Matches(scriptIn, CompilerRegex.metaBlockRegex, RegexOptions.Singleline); // single line flag makes . match newlines
-
 
 			if (metaBlockMatches != null && metaBlockMatches.Count > 0)
 			{
@@ -113,7 +111,6 @@ namespace Pinion.Compiler
 
 				Match metaBlockMatch = metaBlockMatches[0];
 				metaBlock = metaBlockMatch.Groups[1].Value;
-				scriptOut = scriptIn.Remove(metaBlockMatch.Index, metaBlockMatch.Length);
 			}
 
 			return metaBlock;
@@ -149,6 +146,7 @@ namespace Pinion.Compiler
 			CurrentBlockContext = ScriptBlock.None;
 			bool initBlockPresent = false;
 			bool mainBlockPresent = false;
+			bool metaBlockPresent = false;
 			bool blocksPresent = false;
 			bool implicitMainPresent = false;
 			//bool functionsPresent = false;
@@ -177,6 +175,29 @@ namespace Pinion.Compiler
 					Debug.Log($"[PinionCompiler] LINE: {line}");
 #endif
 
+					if (line == CompilerConstants.MetaBeginMarker)
+					{
+						if (CurrentBlockContext != ScriptBlock.None)
+							AddCompileError($"Cannot use {CompilerConstants.MetaBeginMarker} inside {CurrentBlockContext}.");
+
+						if (metaBlockPresent)
+							AddCompileError($"Cannot have more than one {ScriptBlock.MetaBlock}.");
+						else if (targetContainer.scriptInstructions.Count > 0 || blocksPresent)
+							AddCompileError($"{CompilerConstants.MetaBeginMarker} must be at the start of the script. It cannot occur in any other context.");
+
+						metaBlockPresent = true;
+						CurrentBlockContext = ScriptBlock.MetaBlock;
+						continue;
+					}
+					else if (line == CompilerConstants.MetaEndMarker)
+					{
+						if (CurrentBlockContext != ScriptBlock.MetaBlock)
+							AddCompileError($"Cannot use {CompilerConstants.MetaEndMarker} inside {CurrentBlockContext}.");
+
+						CurrentBlockContext = ScriptBlock.None;
+						continue;
+					}
+
 					if (line == CompilerConstants.InitBeginMarker)
 					{
 						if (CurrentBlockContext != ScriptBlock.None)
@@ -184,14 +205,13 @@ namespace Pinion.Compiler
 
 						if (initBlockPresent)
 							AddCompileError($"Cannot have more than one {ScriptBlock.InitBlock}.");
-						else if (targetContainer.scriptInstructions.Count > 0)
+						else if (targetContainer.scriptInstructions.Count > 0 || blocksPresent)
 							AddCompileError($"{CompilerConstants.InitBeginMarker} must be at the start of the script, below the meta block (if present). It cannot occur in any other context.");
 
 						if (implicitMainPresent)
 							AddCompileError($"Cannot start an {ScriptBlock.InitBlock} when there is an implicit {ScriptBlock.MainBlock} (code outside any block).");
 
 						initBlockPresent = true;
-						blocksPresent = true;
 						CurrentBlockContext = ScriptBlock.InitBlock;
 
 						// Event that enables calling custom logic on the script container on init start.
@@ -222,7 +242,6 @@ namespace Pinion.Compiler
 							AddCompileError($"Cannot start a {ScriptBlock.MainBlock} when there is an implicit {ScriptBlock.MainBlock} (code outside any block).");
 
 						mainBlockPresent = true;
-						blocksPresent = true;
 						CurrentBlockContext = ScriptBlock.MainBlock;
 						targetContainer.mainBlockStartIndex = targetContainer.scriptInstructions.Count;
 						continue;
@@ -255,6 +274,10 @@ namespace Pinion.Compiler
 					// 	continue;
 					// }
 
+
+					// NOTE: meta block is not counted for this: it's "invisible" to itself and other blocks.
+					blocksPresent = initBlockPresent || mainBlockPresent;
+
 					switch (CurrentBlockContext)
 					{
 						case ScriptBlock.MainBlock:
@@ -277,6 +300,9 @@ namespace Pinion.Compiler
 								ParseLineForMain(targetContainer, line);
 							}
 							break;
+
+							// NOTE: meta block is not parsed at all here, it's been interpreted before compilation even began
+							// In fact, we could remove the metablock entirely before this point, but that would create complications (e.g. for line number references etc.)
 
 							// TODO
 							// case CompilerState.FunctionBlock:
@@ -304,15 +330,18 @@ namespace Pinion.Compiler
 
 		private static void ParseLineForInit(PinionContainer targetContainer, string line)
 		{
-			Match match = variableDeclareRegex.Match(line);
-			if (match.Success)
-			{
-				ParseVariableDeclaration(targetContainer, match.Groups[1].Value);
-			}
-			else
-			{
-				AddCompileError("Only variable declarations are allowed in init block.");
-			}
+			// Match match = variableDeclareRegex.Match(line);
+			// if (match.Success)
+			// {
+			// 	ParseVariableDeclaration(targetContainer, match.Groups[1].Value);
+			// }
+			// else
+			// {
+			// 	AddCompileError($"Only variable declarations are allowed in {ScriptBlock.InitBlock}. Invalid content: {line}");
+			// }
+
+			// FIXME This is untested and likely dangerous!
+			ParseLineForMain(targetContainer, line);
 		}
 
 		private static void ParseLineForMain(PinionContainer targetContainer, string line)

@@ -44,4 +44,9 @@ namespace Pinion
 			get { return identifier; }
 		}
 	}
+
+	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
+	public class APIResetAttribute : System.Attribute
+	{
+	}
 }

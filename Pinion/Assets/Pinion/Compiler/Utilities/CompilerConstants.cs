@@ -28,6 +28,9 @@ namespace Pinion.Compiler.Internal
 		public const string MainBeginMarker = "#MAIN";
 		public const string MainEndMarker = "#END_MAIN";
 
+		public const string MetaBeginMarker = "#META";
+		public const string MetaEndMarker = "#END_META";
+
 		public const string FunctionBeginMarker = "#FUNCTION";
 		public const string FunctionEndMarker = "#END_FUNCTION";
 

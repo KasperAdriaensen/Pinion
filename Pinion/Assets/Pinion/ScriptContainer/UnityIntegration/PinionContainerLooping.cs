@@ -120,8 +120,6 @@ namespace Pinion.Unity
 		{
 			base.ParseMetaData(metaData, errorMessageReceiver);
 
-			Debug.Log(metaData);
-
 			if (metaData == null)
 				throw new System.ArgumentNullException(nameof(metaData));
 
@@ -153,13 +151,13 @@ namespace Pinion.Unity
 		{
 			if (splitData == null)
 			{
-				DisplayError(errorMessageReceiver, $"Invalid data in meta block.");
+				DisplayError($"Invalid data in meta block.");
 				return;
 			}
 
 			if (splitData.Length < 2)
 			{
-				DisplayError(errorMessageReceiver, $"Invalid data in meta block. Data needs to follow format 'key:value'.");
+				DisplayError($"Invalid data in meta block. Data needs to follow format 'key:value'.");
 				return;
 			}
 
@@ -168,7 +166,7 @@ namespace Pinion.Unity
 
 			if (splitData.Length > 2)
 			{
-				DisplayError(errorMessageReceiver, $"Invalid data in meta block: {splitData[2]}");
+				DisplayError($"Invalid data in meta block: {splitData[2]}");
 				return;
 			}
 
@@ -193,7 +191,7 @@ namespace Pinion.Unity
 						}
 						else
 						{
-							DisplayError(errorMessageReceiver, $"Could not parse '{flag}' to a valid scheduling value.");
+							DisplayError($"Could not parse '{flag}' to a valid scheduling value.");
 						}
 					}
 					break;
@@ -201,20 +199,27 @@ namespace Pinion.Unity
 				case "loop":
 					if (!System.Enum.TryParse<ExecuteLoop>(value, true, out executeLoop))
 					{
-						DisplayError(errorMessageReceiver, $"Could not parse '{value}' to a valid loop type.");
+						DisplayError($"Could not parse '{value}' to a valid loop type.");
 					}
 					break;
 
 				case "interval":
 					if (!float.TryParse(value, out loopInterval))
 					{
-						DisplayError(errorMessageReceiver, $"Could not parse '{value}' to a valid loop interval value.");
+						DisplayError($"Could not parse '{value}' to a valid loop interval value.");
 					}
 					break;
 
 				default:
-					DisplayError(errorMessageReceiver, $"Invalid meta block content: '{key}:{value}'");
+					DisplayError($"Invalid meta block content: '{key}:{value}'");
 					break;
+			}
+
+			// Local method just to prevent some boilerplate
+			void DisplayError(string message)
+			{
+				if (errorMessageReceiver != null)
+					errorMessageReceiver(message);
 			}
 		}
 
@@ -228,6 +233,12 @@ namespace Pinion.Unity
 			UnityEventCaller.BindUpdate(SleepContinueHandler);
 		}
 
+		private void SleepContinueHandler()
+		{
+			if (Time.time >= sleepResumeTime)
+				RunInternal();
+		}
+
 		// This will be called the next time RunInternal is called, either because it was hooked to Update in OnSleep or because this script runs every Update.
 		// Whichever happens first.
 		protected override void OnSleepResume()
@@ -238,22 +249,10 @@ namespace Pinion.Unity
 			UnityEventCaller.UnbindUpdate(SleepContinueHandler);
 		}
 
-		private void SleepContinueHandler()
-		{
-			if (Time.time >= sleepResumeTime)
-				RunInternal();
-		}
-
 		public void SleepForTime(float seconds)
 		{
 			sleepResumeTime = Time.time + seconds;
 			Sleep();
-		}
-
-		private void DisplayError(System.Action<string> errorMessageReceiver, string message)
-		{
-			if (errorMessageReceiver != null)
-				errorMessageReceiver(message);
 		}
 	}
 }
