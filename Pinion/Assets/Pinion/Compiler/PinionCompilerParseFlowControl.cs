@@ -151,9 +151,18 @@ namespace Pinion.Compiler
 			}
 
 			// See if one has been added.
+			// Not outputting the expression here because it's already been rewritten.
 			if (returnType != typeof(bool)) // null or something else
 			{
-				AddCompileError($"Invalid conditional statement."); // not outputting the expression here because it's already been rewritten
+				if (returnType == typeof(void))
+				{
+					AddCompileError($"Invalid conditional statement. Expression does not return a value.");
+				}
+				else
+				{
+
+					AddCompileError($"Invalid conditional statement. Expression resolves to type {TypeNameShortHands.GetSimpleTypeName(returnType)} instead type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+				}
 				return;
 			}
 

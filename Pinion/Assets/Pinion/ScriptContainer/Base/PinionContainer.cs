@@ -34,6 +34,7 @@ namespace Pinion
 		public ContainerMemoryRegister<int> IntRegister { get { return intRegister; } }
 		public ContainerMemoryRegister<float> FloatRegister { get { return floatRegister; } }
 		public ContainerMemoryRegister<string> StringRegister { get { return stringRegister; } }
+		public ContainerMemoryRegister<bool> BoolRegister { get { return boolRegister; } }
 		public ContainerMemoryRegister<int> LabelRegister { get { return labelRegister; } }
 		public int mainBlockStartIndex = 0; // TODO Don't like this being a public value. It should not be altered outside of compilation.
 
@@ -43,7 +44,8 @@ namespace Pinion
 
 		private ContainerMemoryRegister<int> intRegister = new ContainerMemoryRegister<int>(64);
 		private ContainerMemoryRegister<float> floatRegister = new ContainerMemoryRegister<float>(64);
-		private ContainerMemoryRegister<string> stringRegister = new ContainerMemoryRegister<string>(32);
+		private ContainerMemoryRegister<string> stringRegister = new ContainerMemoryRegister<string>(64);
+		private ContainerMemoryRegister<bool> boolRegister = new ContainerMemoryRegister<bool>(32);
 		private ContainerMemoryRegister<int> labelRegister = new ContainerMemoryRegister<int>(127);
 
 		private Stack<object> stack = new Stack<object>();
@@ -51,6 +53,7 @@ namespace Pinion
 		private int currentInstructionIndex = 0;
 		private Stopwatch executeStopwatch = new Stopwatch();
 		private InternalState stateFlags = InternalState.None;
+		private bool forceStop = false;
 
 		public virtual void Run(System.Action<LogType, string> logHandler = null, params System.ValueTuple<string, object>[] externalVariables)
 		{
@@ -61,6 +64,7 @@ namespace Pinion
 
 		protected void RunInternal()
 		{
+			forceStop = false;
 			int instructionCount = scriptInstructions.Count;
 			stack.Clear();
 
@@ -90,7 +94,7 @@ namespace Pinion
 			{
 				// Previous command paused the script, setting resumeIndex >= 0. Script execution will stop.
 				// Script will resume from resumeIndex when it is run again. 
-				if (resumeIndex >= 0)
+				if (resumeIndex >= 0 || forceStop)
 					break;
 
 				// Runs the actual api call.
@@ -101,6 +105,9 @@ namespace Pinion
 					LogWarning($"Script execution time exceeded timeout of {executionTimeoutMs} ms. Script was stopped.");
 					break;
 				}
+
+				if (forceStop)
+					break;
 			}
 
 			executeStopwatch.Stop();
@@ -220,6 +227,7 @@ namespace Pinion
 
 		public virtual void Stop()
 		{
+			forceStop = true;
 			RemoveStateFlag(InternalState.Initialized);
 		}
 

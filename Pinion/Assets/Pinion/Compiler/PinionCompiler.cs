@@ -120,6 +120,10 @@ namespace Pinion.Compiler
 		{
 			currentLineNumber = 0;
 
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.Log("Script original state: " + System.Environment.NewLine + script);
+#endif
+
 			// Removes comments.
 			script = CompilerRewriting.RemoveComments(script);
 
@@ -129,15 +133,24 @@ namespace Pinion.Compiler
 			// Better way to handle this?
 			script = CompilerRewriting.InsertSourceLineNumbers(script);
 
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.Log("Script after removing comments and inserting line numbers: " + System.Environment.NewLine + script);
+#endif
+
 			// Removes any whitespace.
 			// This significantly simplifies any other pattern matching further along.
 			script = CompilerRewriting.RemoveWhitespace(script);
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.Log("Script after removing whitespace: " + System.Environment.NewLine + script);
+#endif
 
 			// Converts typical flow control keywords to goto label structure.
 			script = CompilerRewriting.RewriteFlowAndExecutionControl(script, AddCompileError);
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			Debug.Log("Script after rewriting: " + System.Environment.NewLine + script);
+			Debug.Log("Script after rewriting flow control: " + System.Environment.NewLine + script);
 #endif
 
 			if (!compileSuccess) // malformed flow control above could be enough to break compilation
@@ -399,7 +412,7 @@ namespace Pinion.Compiler
 
 		private static void AddCompileException(Exception exception)
 		{
-			AddCompileError($"Internal compiler exception. Check game log for details.");
+			AddCompileError($"Internal compiler exception. Check log file for details.");
 			Debug.LogException(exception);
 		}
 

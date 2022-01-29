@@ -60,23 +60,24 @@ namespace Pinion.Compiler
 					return null;
 				}
 			}
-			else if (literal == "false")
+			else if (literal == "false" || literal == "true")
 			{
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.LogFormat("[PinionCompiler] Parsed literal as bool (false): {0}", literal);
+				Debug.LogFormat($"[PinionCompiler] Parsed literal as bool ({literal}): {0}", literal);
 #endif
-				output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadBool).instructionCode);
-				output.Add(0);
-				return typeof(bool);
-			}
-			else if (literal == "true")
-			{
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.LogFormat("[PinionCompiler] Parsed literal as bool (true): {0}", literal);
-#endif
-				output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadBool).instructionCode);
-				output.Add(1);
-				return typeof(bool);
+				bool result = (literal == "true");
+
+				if (targetContainer.BoolRegister.RegisterValue(result, out ushort index, true))
+				{
+					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadBool).instructionCode);
+					output.Add(index);
+					return typeof(bool);
+				}
+				else
+				{
+					AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+					return null;
+				}
 			}
 			else if (Regex.IsMatch(literal, CompilerRegex.validIntRegex))
 			{
@@ -139,7 +140,7 @@ namespace Pinion.Compiler
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 				Debug.LogFormat("[PinionCompiler] Parsed literal as unrecognized: {0}", literal);
 #endif
-				AddCompileError($"Unrecognized literal: \"{literal}\".");
+				AddCompileError($"Unrecognized literal: {literal}");
 				return null;
 			}
 		}

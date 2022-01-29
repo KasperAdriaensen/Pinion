@@ -16,18 +16,50 @@ namespace Pinion.Compiler
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.Log("[PinionCompiler] Parsing variable declaration: " + argumentsString);
 #endif
+			// nested method
+			string ReadUntilNextChar(string input, char stopAt, out string stringRemaining)
+			{
+				string output = string.Empty;
+				stringRemaining = input;
 
-			// Variable declaration currently expects exactly 2 arguments.
-			string[] arguments = argumentsString.Split(',');
+				if (!string.IsNullOrWhiteSpace(input))
+				{
+					int charLocation = input.IndexOf(stopAt);
 
-			if (arguments == null || arguments.Length < 2)
+					if (charLocation > 0)
+					{
+						output = input.Substring(0, charLocation);
+
+						if (charLocation + 1 < input.Length)
+							stringRemaining = input.Substring(charLocation + 1);
+						else
+							stringRemaining = string.Empty;
+					}
+					else
+					{
+						stringRemaining = string.Empty;
+						output = input;
+					}
+				}
+				else
+				{
+					stringRemaining = string.Empty;
+					output = string.Empty;
+				}
+
+				return output;
+			}
+
+			string remainingArgsString = argumentsString;
+			string typeIdentifier = ReadUntilNextChar(remainingArgsString, ',', out remainingArgsString);
+			string variableName = ReadUntilNextChar(remainingArgsString, ',', out remainingArgsString);
+			string valueExpression = remainingArgsString;
+
+			if (string.IsNullOrEmpty(typeIdentifier) || string.IsNullOrEmpty(variableName))
 			{
 				AddCompileError($"Invalid variable declaration. Incorrect number of arguments. Arguments are: \"{argumentsString}\".");
 				return;
 			}
-
-			string typeIdentifier = arguments[0];
-			string variableName = arguments[1];
 
 			// Only used to store this external value "by name". Kept with two $$, just so the external code visually matches the script code.
 			// Otherwise treated identically.
@@ -90,7 +122,16 @@ namespace Pinion.Compiler
 					break;
 
 				case "bool":
-					throw new System.NotImplementedException(); // TODO: We don't have a register for bools right now, because that wasn't necessary for literals.
+					if (targetContainer.BoolRegister.RegisterValue(out index, false, externalVariableName))
+					{
+						variableNameToPointerMappings.Add(variableName, new VariablePointer<bool>(index));
+					}
+					else
+					{
+						AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+						return;
+					}
+					break;
 
 				case "string":
 					// declare with default string.empty, so we don't have to care about null refs in a language where null isn't really a thing
@@ -116,11 +157,8 @@ namespace Pinion.Compiler
 #endif
 
 			// optional default value
-			if (arguments.Length < 3)
-				return;
-
-			string valueExpression = arguments[2];
-			ParseVariableWrite(targetContainer, variableName, valueExpression);
+			if (!string.IsNullOrEmpty(valueExpression))
+				ParseVariableWrite(targetContainer, variableName, valueExpression);
 		}
 
 		private static Type ParseVariableRead(string variableName, List<ushort> output)
@@ -188,7 +226,10 @@ namespace Pinion.Compiler
 			System.Type expectedType = pointer.GetValueType();
 			if (returnType != expectedType) // return is null or something other than expectedType
 			{
-				AddCompileError(string.Format($"Cannot assign a value of type {TypeNameShortHands.GetSimpleTypeName(returnType)} to variable {variableName}, of type {TypeNameShortHands.GetSimpleTypeName(expectedType)}."));
+				if (returnType == typeof(void))
+					AddCompileError(string.Format($"Expression in the variable assignment returns no value."));
+				else
+					AddCompileError(string.Format($"Cannot assign a value of type {TypeNameShortHands.GetSimpleTypeName(returnType)} to variable {variableName}, of type {TypeNameShortHands.GetSimpleTypeName(expectedType)}."));
 				return;
 			}
 

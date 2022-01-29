@@ -35,14 +35,13 @@ namespace Pinion.Compiler.Internal
 			}
 		}
 
-
+		// Lower case and @ to allow direct ToString without conflicting with c# keyword
 		private enum ConditionalKeyword
 		{
-			If,
-			EndIf,
-			Else,
-			ElseIf,
-			IfImplied
+			@if,
+			@endif,
+			@else,
+			@elseif
 		}
 
 		public bool AttemptRewrite(string inputLine, out string outputLine, int lineNumber)
@@ -65,7 +64,7 @@ namespace Pinion.Compiler.Internal
 					errorsEncountered.Add(($"Empty If statement.'", lineNumber));
 
 				//outputLine = $"{CompilerConstants.ConditionLabelJump}{CompilerConstants.LabelReadPrefix}{GetBranchLabel(ConditionalKeyword.If, true)},{match.Groups[1].Value}";
-				outputLine = BuildIf(match.Groups[1].Value, ConditionalKeyword.If);
+				outputLine = BuildIf(match.Groups[1].Value, ConditionalKeyword.@if);
 
 				return true;
 			}
@@ -113,11 +112,11 @@ namespace Pinion.Compiler.Internal
 				if (string.IsNullOrEmpty(condition))
 					errorsEncountered.Add(($"Empty ElseIf statement.'", lineNumber));
 
-				string elseLogic = BuildElse(ConditionalKeyword.ElseIf, lineNumber);
+				string elseLogic = BuildElse(ConditionalKeyword.elseif, lineNumber);
 				// Second argument: Reuse the same branch index as was generated for the ELSE above. Essentially this means that the IF is not truly "nested" in the ELSE.
 				// The alternative would mean we have to close two branches when encountering the single ENDIF further on: one explicitly for the enclosing ELSE and one implicitly for the nested IF.
 				// That was harder, so we go with this solution.
-				string ifLogic = BuildIf(condition, ConditionalKeyword.If, true);
+				string ifLogic = BuildIf(condition, ConditionalKeyword.@if, true);
 
 				outputLine = elseLogic + System.Environment.NewLine + ifLogic;
 
@@ -144,7 +143,7 @@ namespace Pinion.Compiler.Internal
 				// 	errorsEncountered.Add(($"Invalid Else condition: '{inputLine}'", lineNumber));
 				// }
 
-				outputLine = BuildElse(ConditionalKeyword.Else, lineNumber);
+				outputLine = BuildElse(ConditionalKeyword.@else, lineNumber);
 
 				return true;
 			}
@@ -180,13 +179,13 @@ namespace Pinion.Compiler.Internal
 		{
 			string result = string.Empty;
 
-			BranchInfo previousBranch = CloseBranch();
+			BranchInfo previousBranch = CloseBranch(lineNumber);
 			ConditionalKeyword previousKeyword = previousBranch.keyword;
 			int endIfDepth = previousBranch.endIfDebt;
 
-			if (previousKeyword != ConditionalKeyword.If && previousKeyword != ConditionalKeyword.ElseIf)
+			if (previousKeyword != ConditionalKeyword.@if && previousKeyword != ConditionalKeyword.elseif)
 			{
-				errorsEncountered.Add(($"The conditional keyword {keyword} must be preceded by {ConditionalKeyword.If} or {ConditionalKeyword.ElseIf}.", lineNumber));
+				errorsEncountered.Add(($"The conditional keyword {keyword} must be preceded by {ConditionalKeyword.@if} or {ConditionalKeyword.elseif}.", lineNumber));
 			}
 
 			string closeBranchLabel = $"{branchLabelBase}{previousBranch.index}";
@@ -199,14 +198,27 @@ namespace Pinion.Compiler.Internal
 		{
 			string result = string.Empty;
 
-			do
+			// This can happen in degenerate cases like when the closing quotation mark is forgotten in something like if '(Add("a string", "another string)'
+			// The whitespace removal logic (earlier in the compiler) preserves all spaces insides quotations (i.e. strings) but this DOES assume that all quotation marks are properly balanced.
+			// Removing this assumption makes it much harder to properly strip the whitespace.
+			// If the whitespace isn't removed from something like 'if (Add("a string", "another string)', the regex to match if-statements also doesn't match since it ASSUMES all whitespace is already gone.
+			// We might add an optional whitespace in the regex, but then it's the only one that DOES allow for that across the board. It might also create other unexpected edge cases.
+			// Since stuff won't compile anyway in the "unbalanced quotation mark scenario", we'll just make sure we don't try to pop from an empty branch stack once we encounter the endif.
+			// And give a maximally informative error while we're at it.
+			if (branchStack.Count == 0)
 			{
-				BranchInfo previousBranch = CloseBranch();
+				errorsEncountered.Add(($"Conditional keyword {ConditionalKeyword.endif} encountered without a matching {ConditionalKeyword.@if}, {ConditionalKeyword.@else}, or {ConditionalKeyword.elseif}. Is there a malformed conditional statement further up?", lineNumber));
+				return result;
+			}
+
+			while (branchStack.Count > 0)
+			{
+				BranchInfo previousBranch = CloseBranch(lineNumber);
 				ConditionalKeyword previousKeyword = previousBranch.keyword;
 
-				if (previousKeyword == ConditionalKeyword.EndIf)
+				if (previousKeyword == ConditionalKeyword.endif)
 				{
-					errorsEncountered.Add(($"The conditional keyword {ConditionalKeyword.EndIf} must be preceded by {ConditionalKeyword.If}, {ConditionalKeyword.Else}, or {ConditionalKeyword.ElseIf}.", lineNumber));
+					errorsEncountered.Add(($"The conditional keyword {ConditionalKeyword.endif} must be preceded by {ConditionalKeyword.@if}, {ConditionalKeyword.@else}, or {ConditionalKeyword.elseif}.", lineNumber));
 				}
 
 				string closeBranchLabel = $"{branchLabelBase}{previousBranch.index}";
@@ -221,7 +233,7 @@ namespace Pinion.Compiler.Internal
 					break;
 				}
 			}
-			while (branchStack.Count > 0);
+
 
 			return result;
 		}
@@ -233,7 +245,7 @@ namespace Pinion.Compiler.Internal
 			return branchStack.Peek();
 		}
 
-		private BranchInfo CloseBranch()
+		private BranchInfo CloseBranch(int lineNumber)
 		{
 			return branchStack.Pop();
 		}
@@ -242,54 +254,6 @@ namespace Pinion.Compiler.Internal
 		{
 			return branchStack.Peek();
 		}
-
-		/*
-
-				private string GetBranchLabel(ConditionalKeyword keyword, bool openBranch)
-				{
-					// openBranch == true always amounts to doing the same as if keyword
-					// for closing a branch, we check if we're closing the branch with a valid new keyword
-					// e.g. if-elseif-else-endif is valid, but not if-else-elseif-endif or if-else-else-endif, etc.
-
-					if (openBranch || keyword == ConditionalKeyword.If)
-					{
-						ifScope.Push((ifUniqueIndex, keyword));
-						ifUniqueIndex++;
-						return $"IfEnd{ifScope.Peek()}";
-					}
-
-					// Below, openBranch is ALWAYS false. In other words: checks below only relate to closing branches
-
-					if (keyword == ConditionalKeyword.ElseIf || keyword == ConditionalKeyword.Else)
-					{
-						(int, ConditionalKeyword) scopeInfo = ifScope.Pop();
-						ConditionalKeyword previousKeyword = scopeInfo.Item2;
-
-						if (previousKeyword != ConditionalKeyword.If || previousKeyword != ConditionalKeyword.ElseIf)
-						{
-							errorsEncountered.Add($"The conditional keyword {keyword} must be preceded by {ConditionalKeyword.Else} or {ConditionalKeyword.ElseIf}.");
-						}
-
-						int value = scopeInfo.Item1;
-						return $"IfEnd{value}";
-					}
-
-					if (keyword == ConditionalKeyword.EndIf)
-					{
-						(int, ConditionalKeyword) scopeInfo = ifScope.Pop();
-						ConditionalKeyword previousKeyword = scopeInfo.Item2;
-
-						if (previousKeyword == ConditionalKeyword.EndIf)
-						{
-							errorsEncountered.Add($"The conditional keyword {ConditionalKeyword.EndIf} must be preceded by {ConditionalKeyword.If}, {ConditionalKeyword.Else}, or {ConditionalKeyword.ElseIf}.");
-						}
-
-						int value = scopeInfo.Item1;
-						return $"IfEnd{value}";
-					}
-
-					throw new System.NotSupportedException("Unexpected conditional keyword: " + keyword.ToString());
-				}*/
 
 		public void CheckValidity(Action<string, int> errorMessageHandler)
 		{

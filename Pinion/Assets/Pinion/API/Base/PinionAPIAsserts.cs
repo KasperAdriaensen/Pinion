@@ -1,10 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
+using Pinion.Documentation;
 using UnityEngine;
 
 namespace Pinion
 {
 	[APISource]
+	[DocSourceDisplayName("Asserts")]
 	public static class PinionAPIAsserts
 	{
 		[APIMethod]

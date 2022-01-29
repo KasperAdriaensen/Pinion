@@ -332,6 +332,30 @@ namespace Pinion
 			}
 		}
 
+		private static IEnumerable<MethodInfo> GetAllAPIInitializersInSource(Type targetType)
+		{
+			BindingFlags methodBindingFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
+			foreach (MethodInfo methodInfo in targetType.GetMethods(methodBindingFlags))
+			{
+				APIInitAttribute methodAttribute = methodInfo.GetCustomAttribute(typeof(APIInitAttribute), false) as APIInitAttribute;
+
+				if (methodAttribute != null)
+					yield return methodInfo;
+			}
+		}
+
+		public static void InitAPISources()
+		{
+			foreach (Type sourceType in GetAllAPISources())
+			{
+				foreach (MethodInfo initializer in GetAllAPIInitializersInSource(sourceType))
+				{
+					initializer.Invoke(null, null);
+				}
+			}
+		}
+
 		public static void StoreAllAPISources(List<Type> store)
 		{
 			if (store == null)

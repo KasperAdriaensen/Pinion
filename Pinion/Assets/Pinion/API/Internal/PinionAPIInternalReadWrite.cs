@@ -36,7 +36,8 @@ namespace Pinion
 		[APIInternalMethodIdentifier(PinionAPI.InternalIDReadBool)]
 		public static void ReadValue_Bool(PinionContainer container)
 		{
-			container.Push(container.AdvanceToNextInstruction() != 0); // 0 = false, everything else = true
+			bool value = container.BoolRegister.ReadValue(container.AdvanceToNextInstruction());
+			container.Push(value);
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
@@ -65,7 +66,7 @@ namespace Pinion
 		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteBool)]
 		public static void WriteValue_Bool(PinionContainer container)
 		{
-			throw new System.NotImplementedException();
+			container.BoolRegister.WriteValue(container.AdvanceToNextInstruction(), (bool)container.PopFromStack());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]

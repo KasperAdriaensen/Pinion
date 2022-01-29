@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using ArgList = System.Collections.ObjectModel.ReadOnlyCollection<System.Type>; // This was getting lengthy.
 
 namespace Pinion
 {
@@ -47,6 +46,11 @@ namespace Pinion
 
 	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
 	public class APIResetAttribute : System.Attribute
+	{
+	}
+
+	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
+	public class APIInitAttribute : System.Attribute
 	{
 	}
 }

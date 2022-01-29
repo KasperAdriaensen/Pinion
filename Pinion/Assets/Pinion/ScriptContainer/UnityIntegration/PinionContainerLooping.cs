@@ -59,6 +59,7 @@ namespace Pinion.Unity
 			base.Stop();
 			UnityEventCaller.UnbindUpdate(OnUpdate);
 			UnityEventCaller.UnbindFixedUpdate(OnFixedUpdate);
+			UnityEventCaller.UnbindUpdate(SleepContinueHandler);
 			lastExecuteTime = float.NegativeInfinity;
 			lastExecuteTimeFixed = float.NegativeInfinity;
 		}

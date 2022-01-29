@@ -21,6 +21,28 @@ namespace Pinion.Compiler
 		private static bool interpretNextSubtractAsNegate = false;              // stupid edge case => indicates whether the next "-" is the binary subtract operator or the unary "negate" operator 
 		private static List<Type> reuseArgsList = new List<Type>();             // recyclable list of arguments passed to functions to verify signature matches
 
+		private enum TokenType
+		{
+			None,
+			ArgSeparator,
+			ParenthesisOpen,
+			ParenthesisClose,
+			Instruction,
+			Operator,
+			Atomic,
+		}
+
+		private static Dictionary<TokenType, string> tokenTypeToReadable = new Dictionary<TokenType, string>
+		{
+			{TokenType.None, "none"},
+			{TokenType.ArgSeparator, ArgSeparator},
+			{TokenType.ParenthesisOpen, ParenthesisOpen},
+			{TokenType.ParenthesisClose, ParenthesisClose},
+			{TokenType.Instruction, "instruction"},
+			{TokenType.Operator, "operator"},
+			{TokenType.Atomic, "literal/variable"}
+		};
+
 		// For this parsing logic, see: shunting yard algorithm (with quite a few modifications)
 		// https://en.wikipedia.org/wiki/Shunting-yard_algorithm
 		private static Type ParseExpression(PinionContainer container, string expression)
@@ -48,23 +70,91 @@ namespace Pinion.Compiler
 			// Begin the first scope with 0 arguments.
 			argumentCountStack.Push(0);
 
+			string previousToken = string.Empty;
+			string currentToken = string.Empty;
+			TokenType previousTokenType = TokenType.None;
+			HashSet<TokenType> expectedAfterPreviousToken = new HashSet<TokenType>();
+
 			for (int i = 0; i < expressionTokens.Length; i++)
 			{
 				if (!compileSuccess) // If previous token broke everything, we can stop here.
 					break;
 
-				string currentToken = expressionTokens[i];
-
 				// Repeated same split character eg. "))" will insert an empty value in array (artifact of splitting logic). Can safely be ignored.
-				if (string.IsNullOrEmpty(currentToken))
+				if (string.IsNullOrEmpty(expressionTokens[i]))
 					continue;
+
+				previousToken = currentToken;
+				currentToken = expressionTokens[i];
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 				Debug.Log($"[PinionCompiler] Parsing token: {currentToken}");
 #endif
+				if (i > 0)
+					Debug.Log(expressionTokens[i - 1]);
+				if (expectedAfterPreviousToken.Count > 0 && previousTokenType != TokenType.None && !expectedAfterPreviousToken.Contains(previousTokenType))
+				{
+					string expectedTokenString = string.Empty;
+					int hashSetCounter = 0;
+					foreach (TokenType expectedTokenItem in expectedAfterPreviousToken)
+					{
+						expectedTokenString += $"'{tokenTypeToReadable[expectedTokenItem]}'";
+
+						if (hashSetCounter < expectedAfterPreviousToken.Count - 1)
+							expectedTokenString += " or ";
+
+						hashSetCounter++;
+					}
+
+					AddCompileError($"Unexpected token: {previousToken}. Expected {expectedTokenString}.");
+				}
+
+				expectedAfterPreviousToken.Clear();
+
+				switch (previousTokenType)
+				{
+					case TokenType.ArgSeparator:
+						expectedAfterPreviousToken.Add(TokenType.Atomic);
+						expectedAfterPreviousToken.Add(TokenType.Instruction);
+						expectedAfterPreviousToken.Add(TokenType.Operator);
+						break;
+					case TokenType.ParenthesisOpen:
+						expectedAfterPreviousToken.Add(TokenType.Atomic);
+						expectedAfterPreviousToken.Add(TokenType.Instruction);
+						expectedAfterPreviousToken.Add(TokenType.Operator);
+						expectedAfterPreviousToken.Add(TokenType.ParenthesisOpen);
+						expectedAfterPreviousToken.Add(TokenType.ParenthesisClose);
+						break;
+					case TokenType.ParenthesisClose:
+						expectedAfterPreviousToken.Add(TokenType.ArgSeparator);
+						expectedAfterPreviousToken.Add(TokenType.Operator);
+						expectedAfterPreviousToken.Add(TokenType.ParenthesisClose);
+						break;
+					case TokenType.Instruction:
+						expectedAfterPreviousToken.Add(TokenType.ParenthesisOpen);
+						break;
+					case TokenType.Operator:
+						expectedAfterPreviousToken.Add(TokenType.ArgSeparator);
+						expectedAfterPreviousToken.Add(TokenType.Atomic);
+						expectedAfterPreviousToken.Add(TokenType.Instruction);
+						expectedAfterPreviousToken.Add(TokenType.Operator);
+						expectedAfterPreviousToken.Add(TokenType.ParenthesisOpen);
+						expectedAfterPreviousToken.Add(TokenType.ParenthesisClose);
+						break;
+					case TokenType.Atomic:
+						expectedAfterPreviousToken.Add(TokenType.ArgSeparator);
+						expectedAfterPreviousToken.Add(TokenType.Operator);
+						expectedAfterPreviousToken.Add(TokenType.ParenthesisClose);
+						break;
+					default:
+						break;
+				}
+
+				previousTokenType = TokenType.None;
+
 				if (currentToken == ArgSeparator) // a comma can be ignored
 				{
-
+					previousTokenType = TokenType.ArgSeparator;
 					bool foundOpeningParenthesis = false;
 					string operatorOnStack = null;
 
@@ -100,6 +190,7 @@ namespace Pinion.Compiler
 
 				if (PinionAPI.IsInstructionString(currentToken)) // token represents an instruction
 				{
+					previousTokenType = TokenType.Instruction;
 					operatorStack.Push(currentToken);
 					interpretNextSubtractAsNegate = false;
 					continue;
@@ -107,6 +198,7 @@ namespace Pinion.Compiler
 
 				if (OperatorLookup.IsOperator(currentToken)) // token represents operator (will later be converted to function)
 				{
+					previousTokenType = TokenType.Operator;
 					// See comment next to interpretNextSubtractAsNegate declaration.
 					if (interpretNextSubtractAsNegate && currentToken == "-")
 						currentToken = "n";
@@ -126,6 +218,7 @@ namespace Pinion.Compiler
 
 				if (currentToken == ParenthesisOpen)
 				{
+					previousTokenType = TokenType.ParenthesisOpen;
 					operatorStack.Push(currentToken);
 					argumentCountStack.Push(0);
 					interpretNextSubtractAsNegate = true;
@@ -134,6 +227,8 @@ namespace Pinion.Compiler
 
 				if (currentToken == ParenthesisClose)
 				{
+					previousTokenType = TokenType.ParenthesisClose;
+
 					bool foundMatchingParenthesis = false;
 					string poppedOperator = null;
 
@@ -185,7 +280,9 @@ namespace Pinion.Compiler
 
 				if (Returns(ParseAtomicValue(container, currentToken, output)))
 				{
+					previousTokenType = TokenType.Atomic;
 					interpretNextSubtractAsNegate = false;
+
 				}
 				else
 				{
@@ -216,7 +313,7 @@ namespace Pinion.Compiler
 			// If there's more left on the stack, something went wrong.
 			if (argumentStack.Count > 1)
 			{
-				AddCompileError($"Expression returned invalid: {expression}.");
+				AddCompileError($"Expression could not parsed correctly: {expression}.");
 				return null;
 			}
 

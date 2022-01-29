@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using UnityEngine;
 
 namespace Pinion.Compiler.Internal
 {
@@ -19,7 +20,7 @@ namespace Pinion.Compiler.Internal
 
 			if (match.Success)
 			{
-				// While(expression)
+				// while(expression)
 				// becomes:
 				// label:@WhileStart0
 				// ?=>@WhileEndx,expression
@@ -35,7 +36,7 @@ namespace Pinion.Compiler.Internal
 			if (match.Success)
 			{
 
-				// EndWhile
+				// endwhile
 				// becomes:
 				// =>@WhileStartx
 				// label:@WhileEndx

@@ -24,7 +24,7 @@ namespace Pinion.Compiler.Internal
 		public const string commentRegex = @"\/{2}.*";
 
 		// Full disclosure: I can't find the source that I based this off anymore, but the gist of it is:
-		// It selects for any whitespace characters (0 or more) that are not enclosed in quotation marks.
+		// It selects for any whitespace characters (1 or more) that are not enclosed in quotation marks.
 		// This includes line breaks, meaning this can only act on a per-line basis. Haven't quite figured out how to it better without creating other edge cases.
 		// NOTE: when testing this in a regex parser, the first \ should be removed. It is part of the "\s" regex character.
 		// Normally we'd prepend an @ (verbatim string) to avoid having to use escape characters, but that breaks further down on the other quotation marks. Try it.
