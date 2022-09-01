@@ -9,9 +9,7 @@ namespace Pinion.Unity
 	// This can be used to support Unity logic that returns asynchronously, while still treating it as "synchronous" for the purposes of the script itself.
 	public class PinionContainerAsync : PinionContainer
 	{
-		// Currently supports only waiting for one async operation at a time.
-		// How to improve this? Complicated without losing some other guarantees.
-		private AsyncOperation currentAsyncOperation = null;
+		private List<System.Func<bool>> waitConditions = new List<System.Func<bool>>();
 
 		public string ProgressMessage
 		{
@@ -21,7 +19,12 @@ namespace Pinion.Unity
 
 		public void SleepUntilDone(AsyncOperation asyncOperation, string message = null)
 		{
-			currentAsyncOperation = asyncOperation;
+			SleepWhile(() => !asyncOperation.isDone, message);
+		}
+
+		public void SleepWhile(System.Func<bool> condition, string message = null)
+		{
+			waitConditions.Add(condition);
 			ProgressMessage = message;
 			Sleep();
 		}
@@ -36,9 +39,20 @@ namespace Pinion.Unity
 
 		private void SleepContinueHandler()
 		{
-			if (currentAsyncOperation == null || currentAsyncOperation.isDone)
+			// Check for and remove any wait conditions that return false.
+			for (int i = waitConditions.Count - 1; i >= 0; i--)
 			{
-				currentAsyncOperation = null;
+				System.Func<bool> waitCondition = waitConditions[i];
+
+				if (waitCondition.Invoke() == false)
+				{
+					waitConditions.Remove(waitCondition);
+				}
+			}
+
+			// If no more wait conditions, continue execution.
+			if (waitConditions == null || waitConditions.Count < 1)
+			{
 				RunInternal();
 			}
 		}
