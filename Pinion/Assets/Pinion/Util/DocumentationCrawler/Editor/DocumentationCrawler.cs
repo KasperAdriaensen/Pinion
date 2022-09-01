@@ -78,23 +78,21 @@ namespace Pinion.Documentation
 			skipList = "PinionAPIAsserts";
 		}
 
-		private void ErrorDisplay(string message)
-		{
-
-		}
-
 		private void GenerateDocumentation(bool includeInternal = false)
 		{
 			StringBuilder stringBuilder = new StringBuilder();
 
 
-			for (int i = 0; i < prop_prependTexts.arraySize; i++)
+			if (prependTexts.Length > 0) // This accomplishes nothing, except for stopping the compiler from throwing a warning it's not "used" otherwise.
 			{
-				TextAsset textAsset = (TextAsset)prop_prependTexts.GetArrayElementAtIndex(i).objectReferenceValue;
-
-				if (textAsset != null)
+				for (int i = 0; i < prop_prependTexts.arraySize; i++)
 				{
-					stringBuilder.Append(textAsset.text);
+					TextAsset textAsset = (TextAsset)prop_prependTexts.GetArrayElementAtIndex(i).objectReferenceValue;
+
+					if (textAsset != null)
+					{
+						stringBuilder.Append(textAsset.text);
+					}
 				}
 			}
 
