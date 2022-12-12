@@ -3,191 +3,191 @@
 //loop:EveryTime
 //END_META
 
-Declare(int, $testValue, -1)
-Declare(int, $output, -1)
+declare(int, $testValue, -1)
+declare(int, $output, -1)
 
 
 
 //
-Set($testValue, 0)
+set($testValue, 0)
 
-If ($testValue == 0)
-	Set($output, 0)
-EndIf
+if ($testValue == 0)
+	set($output, 0)
+endif
 
 AssertEquals($output, 0)
 
 //===================================================
 
-Set($testValue, 1)
+set($testValue, 1)
 
-If ($testValue == 1)
-	Set($output, 1)
-EndIf
+if ($testValue == 1)
+	set($output, 1)
+endif
 
 AssertEquals($output, 1)
 
 //===================================================
 
-Set($testValue, 3)
+set($testValue, 3)
 
-If ($testValue == 2)
-	Set($output, 2)
-Else
-	Set($output, 3)
-EndIf
+if ($testValue == 2)
+	set($output, 2)
+else
+	set($output, 3)
+endif
 
 AssertEquals($output, 3)
 
 //===================================================
 
-Set($testValue, 1000)
+set($testValue, 1000)
 
-If ($testValue == 4)
-	Set($output, 4)
-ElseIf ($testValue == 5)
-	Set($output, 5)
-Else
-	Set($output, 6)
-EndIf
-
-AssertEquals($output, 6)
-
-//===================================================
-
-Set($testValue, 6)
-
-If ($testValue == 4)
-	Set($output, 4)
-ElseIf ($testValue == 5)
-	Set($output, 5)
-ElseIf ($testValue == 6)
-	Set($output, 6)
-Else
-	Set($output, 7)
-EndIf
+if ($testValue == 4)
+	set($output, 4)
+elseif ($testValue == 5)
+	set($output, 5)
+else
+	set($output, 6)
+endif
 
 AssertEquals($output, 6)
 
 //===================================================
 
-Set($testValue, 6)
+set($testValue, 6)
 
-If ($testValue == 4)
-	Set($output, 4)
-Else
-	If($testValue == 6)
-		Set($output, 6)
-	EndIf
-EndIf
+if ($testValue == 4)
+	set($output, 4)
+elseif ($testValue == 5)
+	set($output, 5)
+elseif ($testValue == 6)
+	set($output, 6)
+else
+	set($output, 7)
+endif
 
 AssertEquals($output, 6)
 
 //===================================================
 
-Set($testValue, 10)
+set($testValue, 6)
 
-If ($testValue == 5)
-	Set($output, 5)
-Else
-	If($testValue == 6)
-		Set($output, 6)
-	Else
-		Set($output, 10)
-	EndIf
-EndIf
+if ($testValue == 4)
+	set($output, 4)
+else
+	if($testValue == 6)
+		set($output, 6)
+	endif
+endif
+
+AssertEquals($output, 6)
+
+//===================================================
+
+set($testValue, 10)
+
+if ($testValue == 5)
+	set($output, 5)
+else
+	if($testValue == 6)
+		set($output, 6)
+	else
+		set($output, 10)
+	endif
+endif
 
 AssertEquals($output, 10)
 
 //===================================================
 
-Set($testValue, 12)
+set($testValue, 12)
 
-If ($testValue == 8)
-	Set($output, 8)
-Else
-	If($testValue == 9)
-		Set($output, 9)
-	ElseIf ($testValue == 11)
-		Set($output, 11)
-	Else 
-		Set($output, 12)
-	EndIf
-EndIf
+if ($testValue == 8)
+	set($output, 8)
+else
+	if($testValue == 9)
+		set($output, 9)
+	elseif ($testValue == 11)
+		set($output, 11)
+	else 
+		set($output, 12)
+	endif
+endif
 
 AssertEquals($output, 12)
 
 //===================================================
 
-Set($testValue, 14)
+set($testValue, 14)
 
-If ($testValue == 8)
-	Set($output, 8)
-Else
-	If($testValue == 9)
-		Set($output, 9)
-	ElseIf ($testValue == 14)
-		Set($output, 14)
-	Else 
-		Set($output, 12)
-	EndIf
-EndIf
+if ($testValue == 8)
+	set($output, 8)
+else
+	if($testValue == 9)
+		set($output, 9)
+	elseif ($testValue == 14)
+		set($output, 14)
+	else 
+		set($output, 12)
+	endif
+endif
 
 AssertEquals($output, 14)
 
 //===================================================
 
-Set($testValue, 20)
+set($testValue, 20)
 
-If ($testValue < 10)
-	Set($output, 10)
-ElseIf ($testValue >= 10)
-	Set($output, 20)
-EndIf
+if ($testValue < 10)
+	set($output, 10)
+elseif ($testValue >= 10)
+	set($output, 20)
+endif
 
 AssertEquals($output, 20)
 
 //===================================================
 
-Set($testValue, 20)
+set($testValue, 20)
 
-If ($testValue < 10)
-	Set($output, 10)
-ElseIf ($testValue >= 12)
-	Set($output, 12)
-ElseIf ($testValue >= 14)
-	Set($output, 14)
-ElseIf ($testValue >= 16)
-	Set($output, 16)
-ElseIf ($testValue >= 18)
-	Set($output, 18)
-ElseIf ($testValue >= 20)
-	Set($output, 20)
-ElseIf ($testValue >= 22)
-	Set($output, 22)
-EndIf
+if ($testValue < 10)
+	set($output, 10)
+elseif ($testValue >= 12)
+	set($output, 12)
+elseif ($testValue >= 14)
+	set($output, 14)
+elseif ($testValue >= 16)
+	set($output, 16)
+elseif ($testValue >= 18)
+	set($output, 18)
+elseif ($testValue >= 20)
+	set($output, 20)
+elseif ($testValue >= 22)
+	set($output, 22)
+endif
 
 AssertEquals($output, 12)
 
 //===================================================
 
-Set($testValue, 20)
+set($testValue, 20)
 
-If ($testValue < 10)
-	Set($output, 10)
-ElseIf ($testValue <= 12)
-	Set($output, 12)
-ElseIf ($testValue <= 14)
-	Set($output, 14)
-ElseIf ($testValue <= 16)
-	Set($output, 16)
-ElseIf ($testValue <= 18)
-	Set($output, 18)
-ElseIf ($testValue <= 20)
-	Set($output, 20)
-ElseIf ($testValue <= 22)
-	Set($output, 22)
-EndIf
+if ($testValue < 10)
+	set($output, 10)
+elseif ($testValue <= 12)
+	set($output, 12)
+elseif ($testValue <= 14)
+	set($output, 14)
+elseif ($testValue <= 16)
+	set($output, 16)
+elseif ($testValue <= 18)
+	set($output, 18)
+elseif ($testValue <= 20)
+	set($output, 20)
+elseif ($testValue <= 22)
+	set($output, 22)
+endif
 
 AssertEquals($output, 20)
 

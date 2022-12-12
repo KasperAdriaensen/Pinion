@@ -17,6 +17,8 @@ namespace Pinion.Compiler.Internal
 
 		// Valid ways to define an int are: any sequence of digits, with or without "-" in front.
 		public const string validIntRegex = @"^-?\d+$";
+		private const string validIntRegexNoBounds = @"-?\d+"; // same as above, but excludes start/end markers for insert in other patterns.
+
 		// Valid ways to define a float are: "3.2f", "3.2", ".2", ".2f" or "3f" or any version thereof with "-" in front. "3" will be interpreted as int, because it is checked first.
 		public const string validFloatRegex = @"^-?\d*\.?\d+f?$";
 
@@ -36,10 +38,13 @@ namespace Pinion.Compiler.Internal
 
 		// Regex for valid variable name. 
 		// Current constraints: must be prefixed with $ (default case) or $$ for system variables, first character must be lower or upper case letter (a-z), followed by any amount of alphanumeric characters.
+		public const string validVariableNameRegexNoBounds = @"\$\$?[a-zA-Z][a-zA-Z0-9]*";
 		// Also defines string beginning (^) and end ($), so cannot return partial matches.
-		public const string validVariableNameRegex = @"^\$\$?[a-zA-Z][a-zA-Z0-9]*$";
+		public const string validVariableNameRegex = "^" + validVariableNameRegexNoBounds + "$";
+		public const string splitPreserveVariableWithIndexer = validVariableNameRegexNoBounds + arrayIndexerRegexNoCaptureGroup;
 
-		public const string matchQuoteText = "\"[^\"]*\"";
+
+		public const string splitPreserveTextInQuotes = "\"[^\"]*\"";
 
 		// Used to isolate meta block
 		public const string metaBlockRegex = "#META\r?\n(.*)\r?\n#END_META"; //\r?\n matches both Windows and UNIX style line breaks
@@ -47,6 +52,14 @@ namespace Pinion.Compiler.Internal
 		public const string variableWriteRegex = @"^set\((.*)\)";
 		public const string variableDeclareRegex = @"^declare\((.*)\)";
 
-		public const string LineNumberRegex = @"^#(\d+)#"; // #s surrounding an int, at start of string, capture group contains the number only
+		public const string lineNumberRegex = @"^#(\d+)#"; // #s surrounding an int, at start of string, capture group contains the number only
+
+		public const string arrayInitializerRegex = "{(.+)}";
+		public const string arrayInitializerSplitRegex = "(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)"; // first: line start OR , then: " followed by  a bunch of non-" stuff, OR empty "") OR (any amount of non-, stuff
+		public const string arrayInitializerSplitRegex2 = splitPreserveTextInQuotes + "|" + PinionCompiler.ArgSeparator; // split on quoted strings or commas
+
+		public const string arrayIndexerRegex = "\\" + CompilerConstants.ArrayIndexerOpen + "(.*?)\\" + CompilerConstants.ArrayIndexerClose; // oddly, can't generate consts with string interpolation at this time
+		public const string arrayIndexerRegexNoCaptureGroup = "\\" + CompilerConstants.ArrayIndexerOpen + ".*?\\" + CompilerConstants.ArrayIndexerClose; // oddly, can't generate consts with string interpolation at this time
+
 	}
 }

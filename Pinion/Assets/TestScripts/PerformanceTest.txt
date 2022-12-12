@@ -1,0 +1,5 @@
+declare (int, $iterations, 0)
+
+while ($iterations < 10000)
+	set($iterations, Increment($iterations))
+endwhile

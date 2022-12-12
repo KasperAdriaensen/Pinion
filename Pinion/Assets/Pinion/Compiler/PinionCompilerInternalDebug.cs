@@ -21,7 +21,9 @@ namespace Pinion.Compiler
 		{
 			System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
 			stringBuilder.AppendLine("Outputting full instruction list.");
+			stringBuilder.AppendLine("----------------------------------------------------------");
 			stringBuilder.AppendLine("Pattern: [index] ushortValue: Instruction string");
+			stringBuilder.AppendLine("----------------------------------------------------------");
 
 			string previousInstructionString = null;
 

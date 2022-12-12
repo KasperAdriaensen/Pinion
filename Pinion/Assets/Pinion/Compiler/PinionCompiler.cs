@@ -396,7 +396,7 @@ namespace Pinion.Compiler
 		private static bool LineNumberUpdate(string line, out string resultLine)
 		{
 			// See note above InsertSourceLineNumbers above.
-			Match lineNumberMatch = Regex.Match(line, CompilerRegex.LineNumberRegex);
+			Match lineNumberMatch = Regex.Match(line, CompilerRegex.lineNumberRegex);
 			if (lineNumberMatch.Success)
 			{
 				currentLineNumber = int.Parse(lineNumberMatch.Groups[1].Value); // update "line number"

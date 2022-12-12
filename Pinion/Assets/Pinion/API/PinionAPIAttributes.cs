@@ -29,7 +29,7 @@ namespace Pinion
 	}
 
 	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
-	sealed class APIInternalMethodIdentifierAttribute : System.Attribute
+	public sealed class APIInternalMethodIdentifierAttribute : System.Attribute
 	{
 		private readonly string identifier;
 
@@ -43,6 +43,46 @@ namespace Pinion
 			get { return identifier; }
 		}
 	}
+
+	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
+	public sealed class APICustomCompileRequiredAttribute : System.Attribute
+	{
+		public enum HandlerTypes
+		{
+			None,
+			BeforeInstruction,
+			AfterInstruction,
+			ReplaceInstruction
+		}
+
+		private readonly HandlerTypes handlerType = HandlerTypes.None;
+		private readonly string identifier = string.Empty;
+
+		public APICustomCompileRequiredAttribute(string identifier, HandlerTypes handlerType)
+		{
+			this.identifier = identifier;
+			this.handlerType = handlerType;
+		}
+
+		public HandlerTypes HandlerType
+		{
+			get { return handlerType; }
+		}
+
+		public string Identifier
+		{
+			get { return identifier; }
+		}
+	}
+
+	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
+	public sealed class APICustomCompileIdentifierAttribute : System.Attribute
+	{
+		public APICustomCompileIdentifierAttribute()
+		{
+		}
+	}
+
 
 	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
 	public class APIResetAttribute : System.Attribute

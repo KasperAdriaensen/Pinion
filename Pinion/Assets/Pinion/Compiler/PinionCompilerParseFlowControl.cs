@@ -142,9 +142,9 @@ namespace Pinion.Compiler
 
 			// condition (bool)
 			// will be pushed to standard stack
-			Type returnType = ParseExpression(targetContainer, condition);     // condition
+			CompilerArgument conditionReturnValue = ParseExpression(targetContainer, condition);     // condition
 
-			if (returnType == null)
+			if (!conditionReturnValue.Valid)
 			{
 				// No message here - the failed compilation of the expression will be more meaningful.
 				return;
@@ -152,16 +152,16 @@ namespace Pinion.Compiler
 
 			// See if one has been added.
 			// Not outputting the expression here because it's already been rewritten.
-			if (returnType != typeof(bool)) // null or something else
+			if (conditionReturnValue.argumentType != typeof(bool)) // null or something else
 			{
-				if (returnType == typeof(void))
+				if (conditionReturnValue.IsArgumentTypeVoid)
 				{
 					AddCompileError($"Invalid conditional statement. Expression does not return a value.");
 				}
 				else
 				{
 
-					AddCompileError($"Invalid conditional statement. Expression resolves to type {TypeNameShortHands.GetSimpleTypeName(returnType)} instead type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+					AddCompileError($"Invalid conditional statement. Expression resolves to type {TypeNameShortHands.GetSimpleTypeName(conditionReturnValue.argumentType)} instead type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
 				}
 				return;
 			}

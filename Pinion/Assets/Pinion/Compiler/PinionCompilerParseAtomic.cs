@@ -8,13 +8,13 @@ namespace Pinion.Compiler
 {
 	public partial class PinionCompiler
 	{
-		private static Type ParseAtomicValue(PinionContainer targetContainer, string token, List<ushort> output)
+		private static CompilerArgument ParseAtomicValue(PinionContainer targetContainer, string token, List<ushort> output)
 		{
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.Log($"[PinionCompiler] Parsing atomic value: \'{token}\'");
 #endif
 			if (token.StartsWith(CompilerConstants.VariablePrefix)) // Expression is a variable identifier.
-				return ParseVariableRead(token, output);
+				return ParseVariableRead(targetContainer, token, output);
 
 			// If no instruction keyword is involved and we are not dealing with a variable, we assume we are dealing with a literal and we do some extra processing.
 			// The main problem here is that since the basis of this bytecode is the ushort, we have to be able to cram WHATEVER we might want to pass as a literal

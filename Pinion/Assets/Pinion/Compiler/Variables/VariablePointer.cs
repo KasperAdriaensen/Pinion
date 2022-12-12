@@ -9,6 +9,7 @@ namespace Pinion.Compiler.Internal
 		InstructionData GetWriteInstruction();
 		ushort GetIndexInRegister();
 		System.Type GetValueType();
+		bool IsArray { get; }
 	}
 
 	public struct VariablePointer<T> : IVariablePointer
@@ -29,7 +30,24 @@ namespace Pinion.Compiler.Internal
 			{typeof(string), PinionAPI.InternalIDWriteString},
 		};
 
-		public static string GetReadInstructionIdentifier<U>()
+		private static Dictionary<System.Type, string> readIdentifiersArrayPerType = new Dictionary<System.Type, string>
+		{
+			{typeof(int), PinionAPI.InternalIDReadIntArray},
+			{typeof(float), PinionAPI.InternalIDReadFloatArray},
+			{typeof(bool), PinionAPI.InternalIDReadBoolArray},
+			{typeof(string), PinionAPI.InternalIDReadStringArray},
+		};
+
+		private static Dictionary<System.Type, string> writeIdentifiersArrayPerType = new Dictionary<System.Type, string>
+		{
+			{typeof(int), PinionAPI.InternalIDWriteIntArray},
+			{typeof(float), PinionAPI.InternalIDWriteFloatArray},
+			{typeof(bool), PinionAPI.InternalIDWriteBoolArray},
+			{typeof(string), PinionAPI.InternalIDWriteStringArray},
+		};
+
+
+		private static string GetReadInstructionIdentifier<U>()
 		{
 			System.Type type = typeof(T);
 			if (readIdentifiersPerType.ContainsKey(type))
@@ -38,7 +56,7 @@ namespace Pinion.Compiler.Internal
 			throw new PinionAPIException($"Unsupported read instruction type: {type}");
 		}
 
-		public static string GetWriteInstructionIdentifier<U>()
+		private static string GetWriteInstructionIdentifier<U>()
 		{
 			System.Type type = typeof(T);
 			if (writeIdentifiersPerType.ContainsKey(type))
@@ -47,26 +65,56 @@ namespace Pinion.Compiler.Internal
 			throw new PinionAPIException($"Unsupported write instruction type: {type}");
 		}
 
-		private ushort registerIndexOfVariable;
+		private static string GetReadArrayInstructionIdentifier<U>()
+		{
+			System.Type type = typeof(T);
+			if (readIdentifiersArrayPerType.ContainsKey(type))
+				return readIdentifiersArrayPerType[type];
+
+			throw new PinionAPIException($"Unsupported array read instruction type: {type}");
+		}
+
+		private static string GetWriteArrayInstructionIdentifier<U>()
+		{
+			System.Type type = typeof(T);
+			if (writeIdentifiersArrayPerType.ContainsKey(type))
+				return writeIdentifiersArrayPerType[type];
+
+			throw new PinionAPIException($"Unsupported array write instruction type: {type}");
+		}
+
+		public bool IsArray { get; private set; }
 
 		// For static: see constructor.
-		private static InstructionData readInstruction;
-		private static InstructionData writeInstruction;
+		private static InstructionData readInstruction = null;
+		private static InstructionData writeInstruction = null;
+		private static InstructionData readInstructionArray = null;
+		private static InstructionData writeInstructionArray = null;
+		private static bool foundReadWriteInstructions = false;
 
-		public VariablePointer(ushort registerIndexOfVariable)
+		private ushort registerIndexOfVariable;
+
+		public VariablePointer(ushort registerIndexOfVariable) : this(registerIndexOfVariable, -1)
+		{
+		}
+
+		public VariablePointer(ushort registerIndexOfVariable, int arrayLength)
 		{
 			this.registerIndexOfVariable = registerIndexOfVariable;
+			this.IsArray = arrayLength >= 0;
 
 			// This code automatically assigns the right read/write functions for this type.
-			// It's by name convention, which is a little shaky, but adding new types should happen infrequently enough that it should be maintainable.
-			// If not, this class could be refactored to explicitly accept the right read/write instructions.
 
-			// Only need to this once per type.e.
-			if (readInstruction != default(InstructionData) && writeInstruction != default(InstructionData))
-				return;
+			// Only need to this once per type.
+			if (!foundReadWriteInstructions)
+			{
+				readInstruction = PinionAPI.GetInternalInstructionByID(GetReadInstructionIdentifier<T>());
+				writeInstruction = PinionAPI.GetInternalInstructionByID(GetWriteInstructionIdentifier<T>());
+				readInstructionArray = PinionAPI.GetInternalInstructionByID(GetReadArrayInstructionIdentifier<T>());
+				writeInstructionArray = PinionAPI.GetInternalInstructionByID(GetWriteArrayInstructionIdentifier<T>());
 
-			readInstruction = PinionAPI.GetInternalInstructionByID(GetReadInstructionIdentifier<T>());
-			writeInstruction = PinionAPI.GetInternalInstructionByID(GetWriteInstructionIdentifier<T>());
+				foundReadWriteInstructions = true;
+			}
 		}
 
 		public ushort GetIndexInRegister()
@@ -76,12 +124,12 @@ namespace Pinion.Compiler.Internal
 
 		public InstructionData GetReadInstruction()
 		{
-			return readInstruction;
+			return IsArray ? readInstructionArray : readInstruction;
 		}
 
 		public InstructionData GetWriteInstruction()
 		{
-			return writeInstruction;
+			return IsArray ? writeInstructionArray : writeInstruction;
 		}
 
 		public Type GetValueType()

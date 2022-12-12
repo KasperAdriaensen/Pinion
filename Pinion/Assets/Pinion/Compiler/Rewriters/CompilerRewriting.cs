@@ -108,7 +108,7 @@ namespace Pinion.Compiler.Internal
 
 					// Mimicked from main Pinion compiler. Also handy to be able to reference source line number there.
 					// For more info, check the main compiler logic.
-					Match lineNumberMatch = Regex.Match(line, CompilerRegex.LineNumberRegex);
+					Match lineNumberMatch = Regex.Match(line, CompilerRegex.lineNumberRegex);
 					if (lineNumberMatch.Success)
 					{
 						lineNumber = int.Parse(lineNumberMatch.Groups[1].Value); // update "line number"

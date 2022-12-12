@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Pinion.ContainerMemory;
 using UnityEngine;
 
 namespace Pinion.Compiler.Internal
@@ -31,19 +32,19 @@ namespace Pinion.Compiler.Internal
 	public sealed class InstructionInvoker
 	{
 		private static Dictionary<string, Type> innerDelegateTypeCache = new Dictionary<string, Type>();
-		private static readonly Dictionary<Type, Func<Delegate, object[], object>> innerDelegateToWrapperMap = new Dictionary<Type, Func<Delegate, object[], object>>();
+		private static readonly Dictionary<Type, Func<Delegate, StackValue[], StackValue>> innerDelegateToWrapperMap = new Dictionary<Type, Func<Delegate, StackValue[], StackValue>>();
 		private static StringBuilder signatureStringBuilder = new StringBuilder(1000);
 
-		private readonly Func<Delegate, object[], object> wrapper = null; // a takes a delegate and an object[] and returns an object.
+		private readonly Func<Delegate, StackValue[], StackValue> wrapper = null; // a takes a delegate and a StackValue[] and returns a StackValue.
 		private readonly Delegate innerDelegate = null;
 
-		private InstructionInvoker(Delegate innerDelegate, Func<Delegate, object[], object> wrapper)
+		private InstructionInvoker(Delegate innerDelegate, Func<Delegate, StackValue[], StackValue> wrapper)
 		{
 			this.innerDelegate = innerDelegate;
 			this.wrapper = wrapper;
 		}
 
-		public object Invoke(params object[] args)
+		public StackValue Invoke(params StackValue[] args)
 		{
 			return wrapper(innerDelegate, args);
 		}
@@ -119,7 +120,7 @@ namespace Pinion.Compiler.Internal
 			return signatureStringBuilder.ToString();
 		}
 
-		private static Func<Delegate, object[], object> GetOrCreateMethodWrapper(Type innerDelegateType, Delegate innerDelegateInstance, Type[] parameterTypes)
+		private static Func<Delegate, StackValue[], StackValue> GetOrCreateMethodWrapper(Type innerDelegateType, Delegate innerDelegateInstance, Type[] parameterTypes)
 		{
 			// If already generated, return it from the dictionary.
 			if (innerDelegateToWrapperMap.ContainsKey(innerDelegateType))
@@ -145,7 +146,10 @@ namespace Pinion.Compiler.Internal
 			if (innerDelegateInstance.GetMethodInfo().ReturnType != typeof(void))
 			{
 				// Convert return value of inner delegate to object.
-				UnaryExpression bodyReturningValue = Expression.Convert(innerDelegateInvoke, typeof(object));
+				//	UnaryExpression bodyReturningValue = Expression.Convert(innerDelegateInvoke, typeof(object));
+
+				ConstructorInfo constructorInfo = StackValue.GetConstructorInfo(innerDelegateInstance.GetMethodInfo().ReturnType);
+				NewExpression bodyReturningValue = Expression.New(constructorInfo, innerDelegateInvoke);
 
 				// Create lambda, with bodyReturningValue as body and targetDelegateUntyped and paramsExpUntyped as two arguments
 				lambdaExpression = Expression.Lambda(bodyReturningValue, targetDelegateUntyped, paramsExpUntyped);
@@ -153,8 +157,9 @@ namespace Pinion.Compiler.Internal
 			// If inner delegate does not have a return value...
 			else
 			{
+
 				// Make a dummy return value of null. (Will simply be ignored.)
-				ConstantExpression returnNull = Expression.Constant(null, typeof(object));
+				ConstantExpression returnNull = Expression.Constant(null, typeof(StackValue));
 				// Append that to the void body as a block expression. Block expression is just a sequence of expressions.
 				BlockExpression bodyVoidPlusReturnNull = Expression.Block(innerDelegateInvoke, returnNull);
 
@@ -163,20 +168,26 @@ namespace Pinion.Compiler.Internal
 			}
 
 			// Lambda needs to be compiled! This does not come for free, but should only happen once, ideally during some loading stage.
-			return (Func<Delegate, object[], object>)lambdaExpression.Compile();
+			return (Func<Delegate, StackValue[], StackValue>)lambdaExpression.Compile();
 		}
 
 		private static void CreateParamsExpressions(Type[] parameterTypes, out ParameterExpression paramsExpUntyped, out Expression[] paramsExpTyped)
 		{
-			paramsExpUntyped = Expression.Parameter(typeof(object[]), "untypedArgs"); // these are the untyped arguments fed to the wrapping lambda
+			paramsExpUntyped = Expression.Parameter(typeof(StackValue[]), "untypedArgs"); // these are the untyped arguments fed to the wrapping lambda
 			paramsExpTyped = new Expression[parameterTypes.Length]; // these are the typed arguments fed to inner delegate
 
 			// These basically write the code for "(paramsExpTyped[i]) args[i]"
 			for (int i = 0; i < parameterTypes.Length; i++)
 			{
+				// ConstantExpression constExp = Expression.Constant(i, typeof(int)); // create a "literal" int with value i
+				// BinaryExpression untypedArgument = Expression.ArrayIndex(paramsExpUntyped, constExp); // retrieve array element in object[] at index constExp
+				// paramsExpTyped[i] = Expression.Convert(untypedArgument, parameterTypes[i]); // convert object to correct type
+
 				ConstantExpression constExp = Expression.Constant(i, typeof(int)); // create a "literal" int with value i
 				BinaryExpression untypedArgument = Expression.ArrayIndex(paramsExpUntyped, constExp); // retrieve array element in object[] at index constExp
-				paramsExpTyped[i] = Expression.Convert(untypedArgument, parameterTypes[i]); // convert object to correct type
+				UnaryExpression typedArgument = Expression.Convert(untypedArgument, StackValue.GetStackValueType(parameterTypes[i]));
+
+				paramsExpTyped[i] = Expression.Call(typedArgument, StackValue.GetReadMethodInfo(parameterTypes[i]));
 			}
 		}
 	}

@@ -8,20 +8,18 @@ namespace Pinion
 	[APISource]
 	public static class PinionAPIInternalReadWrite
 	{
-		// These are the instructions carried to push a script literal onto the stack.
+		// These are the instructions carried out to read/wrote a value (literal or variable) from/to memory.
 		// The typical structure: 
-		// 1) Advance to the next instruction in the instruction list. 
-		// 2) That instruction ushort refers to the index in the respective LiteralRegister where that literal is stored. Retrieve that value (typesafe).
-		// 3) Push that value onto the stack. It is pushed onto the stack as a ScriptStackValue.
+		// 1) Advance to the next instruction in the instruction list. That ushort at that point in the instruction list holds the index in the respective ContainerMemoryRegister.
+		// 2) 	- For read: push that value to the stack.
+		//		- For write: pop a value from the stack, replace the value in ContainerMemoryRegister with that one.
 
-		// NOTE: Functions that pop the pushed argument off the stack again will receive it as an object. At runtime, nothing enforces that they cast it to the correct type.
-		// However, this will be enforced at compile time! Compilation should fail if the list of APIPopArguments does not match the current compilation stack.
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPI.InternalIDReadInt)]
 		public static void ReadValue_Int(PinionContainer container)
 		{
 			int value = container.IntRegister.ReadValue(container.AdvanceToNextInstruction());
-			container.Push(value);
+			container.PushToStack(value);
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
@@ -29,7 +27,7 @@ namespace Pinion
 		public static void ReadValue_Float(PinionContainer container)
 		{
 			float value = container.FloatRegister.ReadValue(container.AdvanceToNextInstruction());
-			container.Push(value);
+			container.PushToStack(value);
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
@@ -37,7 +35,7 @@ namespace Pinion
 		public static void ReadValue_Bool(PinionContainer container)
 		{
 			bool value = container.BoolRegister.ReadValue(container.AdvanceToNextInstruction());
-			container.Push(value);
+			container.PushToStack(value);
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
@@ -45,35 +43,97 @@ namespace Pinion
 		public static void ReadValue_String(PinionContainer container)
 		{
 			string value = container.StringRegister.ReadValue(container.AdvanceToNextInstruction());
-			container.Push(value);
+			container.PushToStack(value);
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteInt)]
 		public static void WriteValue_Int(PinionContainer container)
 		{
-			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), (int)container.PopFromStack());
+			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), container.PopFromStack<int>());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteFloat)]
 		public static void WriteValue_Float(PinionContainer container)
 		{
-			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), (float)container.PopFromStack());
+			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), container.PopFromStack<float>());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteBool)]
 		public static void WriteValue_Bool(PinionContainer container)
 		{
-			container.BoolRegister.WriteValue(container.AdvanceToNextInstruction(), (bool)container.PopFromStack());
+			container.BoolRegister.WriteValue(container.AdvanceToNextInstruction(), container.PopFromStack<bool>());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteString)]
 		public static void WriteValue_String(PinionContainer container)
 		{
-			container.StringRegister.WriteValue(container.AdvanceToNextInstruction(), (string)container.PopFromStack());
+			container.StringRegister.WriteValue(container.AdvanceToNextInstruction(), container.PopFromStack<string>());
+		}
+
+		// Array versions. Similar to above, but they take an extra argument to determine an offset to the index in the ContainerMemoryRegister.
+
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		[APIInternalMethodIdentifier(PinionAPI.InternalIDReadIntArray)]
+		public static void ReadValue_IntArray(PinionContainer container)
+		{
+			int value = container.IntRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
+			container.PushToStack(value);
+		}
+
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		[APIInternalMethodIdentifier(PinionAPI.InternalIDReadFloatArray)]
+		public static void ReadValue_FloatArray(PinionContainer container)
+		{
+			float value = container.FloatRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
+			container.PushToStack(value);
+		}
+
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		[APIInternalMethodIdentifier(PinionAPI.InternalIDReadBoolArray)]
+		public static void ReadValue_BoolArray(PinionContainer container)
+		{
+			bool value = container.BoolRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
+			container.PushToStack(value);
+		}
+
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		[APIInternalMethodIdentifier(PinionAPI.InternalIDReadStringArray)]
+		public static void ReadValue_StringArray(PinionContainer container)
+		{
+			string value = container.StringRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
+			container.PushToStack(value);
+		}
+
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteIntArray)]
+		public static void WriteValue_IntArray(PinionContainer container)
+		{
+			container.IntRegister.WriteValueToArray(container, container.PopFromStack<int>(), container.AdvanceToNextInstruction(), container.PopFromStack<int>());
+		}
+
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteFloatArray)]
+		public static void WriteValue_FloatArray(PinionContainer container)
+		{
+			container.FloatRegister.WriteValueToArray(container, container.PopFromStack<float>(), container.AdvanceToNextInstruction(), container.PopFromStack<int>());
+		}
+
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteBoolArray)]
+		public static void WriteValue_BoolArray(PinionContainer container)
+		{
+			container.BoolRegister.WriteValueToArray(container, container.PopFromStack<bool>(), container.AdvanceToNextInstruction(), container.PopFromStack<int>());
+		}
+
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		[APIInternalMethodIdentifier(PinionAPI.InternalIDWriteStringArray)]
+		public static void WriteValue_StringArray(PinionContainer container)
+		{
+			container.StringRegister.WriteValueToArray(container, container.PopFromStack<string>(), container.AdvanceToNextInstruction(), container.PopFromStack<int>());
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Pinion.ContainerMemory
@@ -8,28 +9,89 @@ namespace Pinion.ContainerMemory
 	{
 		public readonly byte registerMax = 64;
 		private T[] register = null;
+		private T defaultValue; // allows overwriting default(string) == null with string.Empty and similar uses cases.
 		private byte registerCount = 0;
-		private bool[] registerValueIsLiteral = null;
+		private ValueMetadata[] valueMetadata = null;
 		private Dictionary<string, byte> externalVariableIndices = null; // in most cases, this won't get used, so no point allocating needlessly
+
+		private enum MemoryType
+		{
+			Unused,
+			Literal,
+			Variable,
+			ArrayRoot
+		}
+
+		private struct ValueMetadata
+		{
+			public MemoryType memoryType;
+			public int arrayLength;
+		}
 
 		public ContainerMemoryRegister(byte maxSize)
 		{
 			registerMax = maxSize;
 			register = new T[registerMax];
 			registerCount = 0;
-			registerValueIsLiteral = new bool[registerMax];
+
+			valueMetadata = new ValueMetadata[registerMax];
+
+			for (int i = 0; i < valueMetadata.Length; i++)
+			{
+				ValueMetadata metadata = valueMetadata[i];
+				metadata.memoryType = MemoryType.Unused;
+				metadata.arrayLength = -1;
+			}
 		}
 
 		// Handy for e.g. string, to fill with string empty instead of default null.
 		public ContainerMemoryRegister(byte maxSize, T defaultValue) : this(maxSize)
 		{
+			this.defaultValue = defaultValue;
 			for (int i = 0; i < register.Length; i++)
 			{
 				register[i] = defaultValue;
 			}
 		}
 
+		public bool RegisterValue(out ushort index, bool isLiteral, string externalVariableName = null)
+		{
+			return RegisterValueInternal(defaultValue, out index, isLiteral ? MemoryType.Literal : MemoryType.Variable, -1, externalVariableName);
+		}
+
 		public bool RegisterValue(T startValue, out ushort index, bool isLiteral, string externalVariableName = null)
+		{
+			return RegisterValueInternal(startValue, out index, isLiteral ? MemoryType.Literal : MemoryType.Variable, -1, externalVariableName);
+		}
+
+		public bool RegisterArray(out ushort startIndex, T[] initializeValues)
+		{
+			if (initializeValues == null)
+				throw new System.ArgumentNullException(nameof(initializeValues));
+
+			startIndex = 0;
+
+			for (int i = 0; i < initializeValues.Length; i++)
+			{
+				if (RegisterValueInternal(initializeValues[i], out ushort memoryIndex, MemoryType.ArrayRoot, initializeValues.Length, null))
+				{
+					if (i == 0)
+					{
+						startIndex = memoryIndex;
+					}
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+
+
+			return true;
+		}
+
+		private bool RegisterValueInternal(T startValue, out ushort index, MemoryType memoryType, int arrayLength, string externalVariableName)
 		{
 			index = 0;
 			if (registerCount >= registerMax)
@@ -40,7 +102,7 @@ namespace Pinion.ContainerMemory
 
 			// For literals, we can safely assign several "instances" of the same literal to the same address. The value will never be altered anyway.
 			// This saves spaces wherever the same literal value is reused.
-			if (isLiteral)
+			if (memoryType == MemoryType.Literal)
 			{
 				byte indexFound = 0;
 				if (LiteralAlreadyPresent(startValue, out indexFound))
@@ -51,10 +113,12 @@ namespace Pinion.ContainerMemory
 			}
 
 			register[registerCount] = startValue;
-			registerValueIsLiteral[registerCount] = isLiteral;
+			valueMetadata[registerCount].memoryType = memoryType;
+			valueMetadata[registerCount].arrayLength = arrayLength;
 
 			// "Exposed" variables save a name so they can be filled in from code outside of the script.
-			if (!isLiteral && !string.IsNullOrEmpty(externalVariableName))
+			// NOTE: Currently external arrays are not supported. We can't guarantee they would fit in the memory register since they aren't filled in at compile time.
+			if (memoryType == MemoryType.Variable && !string.IsNullOrEmpty(externalVariableName))
 			{
 				if (externalVariableIndices == null)
 					externalVariableIndices = new Dictionary<string, byte>();
@@ -70,17 +134,12 @@ namespace Pinion.ContainerMemory
 			return true;
 		}
 
-		public bool RegisterValue(out ushort index, bool isLiteral, string systemVariableName = null)
-		{
-			return RegisterValue(default(T), out index, isLiteral, systemVariableName);
-		}
-
 		private bool LiteralAlreadyPresent(T value, out byte indexFound)
 		{
 			indexFound = 0;
 			for (byte i = 0; i < registerCount; i++)
 			{
-				if (registerValueIsLiteral[i] && register[i].Equals(value))
+				if (valueMetadata[i].memoryType == MemoryType.Literal && register[i].Equals(value))
 				{
 					indexFound = i;
 					return true;
@@ -90,35 +149,94 @@ namespace Pinion.ContainerMemory
 			return false;
 		}
 
-		public T ReadValue(ushort index)
+		public T ReadValue(int valueLocation)
 		{
-			if (index < 0 || index >= registerMax)
+			if (valueLocation < 0 || valueLocation >= registerMax)
 			{
-				Debug.LogError($"Memory index {index} for {typeof(T)} register is out of bounds. Index should be between 0 and {registerMax - 1}. Returning default value.");
-				return default(T);
+				Debug.LogError($"Address {valueLocation} for {typeof(T)} register is invalid. Address should range from 0 to {registerMax - 1}. Returning default value.");
+				return defaultValue;
 			}
 
-			if (index > registerCount)
+			if (valueLocation > registerCount)
 			{
-				Debug.LogError($"Requesting index from {typeof(T)} register at uninitialized index {index}. Current register size is {registerCount}. Returning default value.");
+				Debug.LogError($"Reading from {typeof(T)} register at invalid address {valueLocation}. Current register size is {registerCount}. Returning default value.");
+				return defaultValue;
 			}
 
-			return register[index];
+			return register[valueLocation];
 		}
 
-		public void WriteValue(ushort index, T newValue)
+		public T ReadValueFromArray(PinionContainer container, int arrayLocation, int indexInArray)
 		{
-			if (index < 0 || index >= registerMax)
+			if (arrayLocation < 0 || arrayLocation >= registerMax)
 			{
-				Debug.LogErrorFormat("Memory index {0} is out of bounds. Cannot set value in register.", index);
+				container.LogError($"Address {arrayLocation} for {typeof(T)} register is invalid. Address should range from 0 to {registerMax - 1}. Returning default value.");
+				return defaultValue;
 			}
 
-			if (index > registerCount)
+			if (arrayLocation > registerCount)
 			{
-				Debug.LogErrorFormat("Cannot write value at index {0}, because value at that index is uninitialized. Current register size is {1}.", index, registerCount);
+				container.LogError($"Reading from {typeof(T)} register at invalid address {arrayLocation}. Current register size is {registerCount}. Returning default value.");
+				return defaultValue;
 			}
 
-			register[index] = newValue;
+			if (valueMetadata[arrayLocation].arrayLength <= 0)
+			{
+				container.LogError($"Array is empty. Returning default value.");
+				return defaultValue;
+			}
+
+			if (indexInArray < 0 || indexInArray >= valueMetadata[arrayLocation].arrayLength)
+			{
+				container.LogError($"Requested array index {indexInArray} is out of range. Array's indices range from 0 to {valueMetadata[arrayLocation].arrayLength - 1}. Returning default value.");
+				return defaultValue;
+			}
+
+			return register[arrayLocation + indexInArray];
+		}
+
+		public void WriteValue(ushort valueLocation, T writeValue)
+		{
+			if (valueLocation < 0 || valueLocation >= registerMax)
+			{
+				Debug.LogError($"Address {valueLocation} for {typeof(T)} register is invalid. Address should range from 0 to {registerMax - 1}.");
+			}
+
+			if (valueLocation > registerCount)
+			{
+				Debug.LogError($"Writing to {typeof(T)} register at invalid address {valueLocation}. Current register size is {registerCount}.");
+			}
+
+			register[valueLocation] = writeValue;
+		}
+
+		public void WriteValueToArray(PinionContainer container, T writeValue, int arrayLocation, int indexInArray)
+		{
+			if (arrayLocation < 0 || arrayLocation >= registerMax)
+			{
+				container.LogError($"Address {arrayLocation} for {typeof(T)} register is invalid. Address should range from 0 to {registerMax - 1}.");
+				return;
+			}
+
+			if (arrayLocation > registerCount)
+			{
+				container.LogError($"Writing to {typeof(T)} register at invalid address {arrayLocation}. Current register size is {registerCount}.");
+				return;
+			}
+
+			if (valueMetadata[arrayLocation].arrayLength <= 0)
+			{
+				container.LogError($"Array is empty.");
+				return;
+			}
+
+			if (indexInArray < 0 || indexInArray >= valueMetadata[arrayLocation].arrayLength)
+			{
+				container.LogError($"Requested array index {indexInArray} is out of range. Array's indices range from 0 to {valueMetadata[arrayLocation].arrayLength - 1}.");
+				return;
+			}
+
+			register[arrayLocation + indexInArray] = writeValue;
 		}
 
 		public void StoreExternalVariables(System.ValueTuple<string, object>[] externalVariables)

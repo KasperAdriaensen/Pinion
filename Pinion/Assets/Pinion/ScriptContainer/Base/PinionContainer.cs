@@ -7,7 +7,7 @@ using Pinion.ContainerMemory;
 
 namespace Pinion
 {
-	public class PinionContainer
+	public partial class PinionContainer
 	{
 		// We don't define a "ran to completion" flag because what that  means exactly could depend a lot
 		// on the exact implementation. Better to implement it there, as needed and as fits the purpose.
@@ -18,7 +18,22 @@ namespace Pinion
 			Executing = 2,
 			Sleeping = 4,
 		}
-		public const int executionTimeoutMs = 3000; // Could easily be made configurable in the future.
+
+		public const int executionTimeoutMsDefault = 3000; // Could easily be made configurable in the future.
+		private int executionTimeoutMsCustom = -1;
+
+
+		public int ExecutionTimeoutMs
+		{
+			get
+			{
+				return executionTimeoutMsCustom > 0 ? executionTimeoutMsCustom : executionTimeoutMsDefault;
+			}
+			set
+			{
+				executionTimeoutMsCustom = value;
+			}
+		}
 
 		// TODO This should probably not be editable.
 		public List<ushort> scriptInstructions = new List<ushort>();
@@ -36,11 +51,15 @@ namespace Pinion
 		public ContainerMemoryRegister<string> StringRegister { get { return stringRegister; } }
 		public ContainerMemoryRegister<bool> BoolRegister { get { return boolRegister; } }
 		public ContainerMemoryRegister<int> LabelRegister { get { return labelRegister; } }
+		public StackValue<PinionContainer> StackWrapper { get; private set; }
 		public int mainBlockStartIndex = 0; // TODO Don't like this being a public value. It should not be altered outside of compilation.
 
 		protected int resumeIndex = -1;
 		protected System.Action<LogType, string> logHandler = null;
 		protected System.ValueTuple<string, object>[] externalVariables = null;
+
+		private const int stackInitSize = 16;
+		private const int jumpLocationStackInitSize = 32;
 
 		private ContainerMemoryRegister<int> intRegister = new ContainerMemoryRegister<int>(64);
 		private ContainerMemoryRegister<float> floatRegister = new ContainerMemoryRegister<float>(64);
@@ -48,12 +67,18 @@ namespace Pinion
 		private ContainerMemoryRegister<bool> boolRegister = new ContainerMemoryRegister<bool>(32);
 		private ContainerMemoryRegister<int> labelRegister = new ContainerMemoryRegister<int>(127);
 
-		private Stack<object> stack = new Stack<object>();
-		private Stack<int> jumpLocationStack = new Stack<int>();
+		private Stack<StackValue> stack = new Stack<StackValue>(stackInitSize);
+
+		private Stack<int> jumpLocationStack = new Stack<int>(jumpLocationStackInitSize);
 		private int currentInstructionIndex = 0;
 		private Stopwatch executeStopwatch = new Stopwatch();
 		private InternalState stateFlags = InternalState.None;
 		private bool forceStop = false;
+
+		public PinionContainer()
+		{
+			StackWrapper = new StackValue<PinionContainer>(this);
+		}
 
 		public virtual void Run(System.Action<LogType, string> logHandler = null, params System.ValueTuple<string, object>[] externalVariables)
 		{
@@ -100,9 +125,9 @@ namespace Pinion
 				// Runs the actual api call.
 				PinionAPI.CallAPIInstruction(scriptInstructions[currentInstructionIndex], this);
 
-				if (executeStopwatch.ElapsedMilliseconds >= executionTimeoutMs)
+				if (executeStopwatch.ElapsedMilliseconds >= ExecutionTimeoutMs)
 				{
-					LogWarning($"Script execution time exceeded timeout of {executionTimeoutMs} ms. Script was stopped.");
+					LogWarning($"Script execution time exceeded timeout of {ExecutionTimeoutMs} ms. Script was stopped.");
 					break;
 				}
 
@@ -146,32 +171,47 @@ namespace Pinion
 			Debug.LogError(message);
 		}
 
-		public void Push(int value)
+		public void PushToStack<T>(T value)
 		{
-			stack.Push(value);
+			stack.Push(new StackValue<T>(value));
 		}
 
-		public void Push(string value)
+		// public void Push(int value)
+		// {
+		// 	stack.Push(new StackValue<int>(value));
+		// }
+
+		// public void Push(string value)
+		// {
+		// 	stack.Push(value);
+		// }
+
+		// public void Push(float value)
+		// {
+		// 	stack.Push(value);
+		// }
+
+		// public void Push(bool value)
+		// {
+		// 	stack.Push(value);
+		// }
+
+		// public void Push(object value)
+		// {
+		// 	stack.Push(value);
+		// }
+
+		// public StackValue PopFromStack()
+		// {
+		// 	return stack.Pop();
+		// }
+
+		public T PopFromStack<T>()
 		{
-			stack.Push(value);
+			return (stack.Pop() as StackValue<T>).Read();
 		}
 
-		public void Push(float value)
-		{
-			stack.Push(value);
-		}
-
-		public void Push(bool value)
-		{
-			stack.Push(value);
-		}
-
-		public void Push(object value)
-		{
-			stack.Push(value);
-		}
-
-		public object PopFromStack()
+		public StackValue PopFromStack()
 		{
 			return stack.Pop();
 		}

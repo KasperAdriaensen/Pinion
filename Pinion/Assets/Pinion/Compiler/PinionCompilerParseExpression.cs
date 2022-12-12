@@ -8,18 +8,13 @@ using Pinion.Compiler.Internal;
 
 namespace Pinion.Compiler
 {
+
 	public partial class PinionCompiler
 	{
 		private static string TokenSplitRegex = null; // built by BuildTokenSplitRegex
-		private const string ParenthesisOpen = "(";
-		private const string ParenthesisClose = ")";
-		private const string ArgSeparator = ",";
-
-		private static Stack<string> operatorStack = new Stack<string>(64);     // typical operator stack as in shunting yard algoritm
-		private static Stack<System.Type> argumentStack = new Stack<Type>(64);  // stack of types for compile type checking (essentially like a runtime stack, only with types instead of actual values)
-		private static Stack<int> argumentCountStack = new Stack<int>(64);      // stack used to track how many arguments a function or operator should consume within the current () scope
-		private static bool interpretNextSubtractAsNegate = false;              // stupid edge case => indicates whether the next "-" is the binary subtract operator or the unary "negate" operator 
-		private static List<Type> reuseArgsList = new List<Type>();             // recyclable list of arguments passed to functions to verify signature matches
+		public const string ParenthesisOpen = "(";
+		public const string ParenthesisClose = ")";
+		public const string ArgSeparator = ",";
 
 		private enum TokenType
 		{
@@ -45,30 +40,45 @@ namespace Pinion.Compiler
 
 		// For this parsing logic, see: shunting yard algorithm (with quite a few modifications)
 		// https://en.wikipedia.org/wiki/Shunting-yard_algorithm
-		private static Type ParseExpression(PinionContainer container, string expression)
+		private static CompilerArgument ParseExpression(PinionContainer container, string expression)
 		{
 			if (string.IsNullOrEmpty(expression))
 			{
 				AddCompileError("Empty expression.");
-				return null;
+				return CompilerArgument.Invalid;
 			}
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.Log($"[PinionCompiler] Parsing expression: {expression}.");
 #endif
 
+			// Originally these were all static members that were reused.
+			// BUT that didn't worked as soon as we did recursive parsing of expressions that do not share a stack 
+			// e.g. Log(myArray[$variable + 1]), where "Log(...)" and "$variable + 1" are expression thats (currently) need to be resolve independently.
+			// There's probably a (more efficient) way around this by treating indexers as a separate type of parenthesis that needs to be closed correctly.
+			// But currently that's overcomplicating matters.
+
+			Stack<string> operatorStack = new Stack<string>(64);    // typical operator stack as in shunting yard algoritm
+			Stack<CompilerArgument> argsStack = new Stack<CompilerArgument>(64); // stack of types for compile type checking (essentially like a runtime stack, only with types instead of actual values)
+			Stack<int> argsCountStack = new Stack<int>(64);     // stack used to track how many arguments a function or operator should consume within the current () scope
+			List<CompilerArgument> argsBuffer = new List<CompilerArgument>();            // recyclable list of arguments passed to functions to verify signature matches
+			bool interpretNextSubtractAsNegate = false;             // stupid edge case => indicates whether the next "-" is the binary subtract operator or the unary "negate" operator 
+
 			string[] expressionTokens = Regex.Split(expression, TokenSplitRegex);
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			string debugTokens = string.Empty;
+			foreach (string token in expressionTokens)
+			{
+				debugTokens += token + "   ";
+			}
+			Debug.Log(debugTokens);
+#endif
 
 			List<ushort> output = container.scriptInstructions; // one way or another, we need to expose this, which is annoying... FIXME?
 
-			operatorStack.Clear();
-			argumentStack.Clear();
-			argumentCountStack.Clear();
-			reuseArgsList.Clear();
-			interpretNextSubtractAsNegate = true;
-
 			// Begin the first scope with 0 arguments.
-			argumentCountStack.Push(0);
+			argsCountStack.Push(0);
 
 			string previousToken = string.Empty;
 			string currentToken = string.Empty;
@@ -90,8 +100,7 @@ namespace Pinion.Compiler
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 				Debug.Log($"[PinionCompiler] Parsing token: {currentToken}");
 #endif
-				if (i > 0)
-					Debug.Log(expressionTokens[i - 1]);
+
 				if (expectedAfterPreviousToken.Count > 0 && previousTokenType != TokenType.None && !expectedAfterPreviousToken.Contains(previousTokenType))
 				{
 					string expectedTokenString = string.Empty;
@@ -152,7 +161,7 @@ namespace Pinion.Compiler
 
 				previousTokenType = TokenType.None;
 
-				if (currentToken == ArgSeparator) // a comma can be ignored
+				if (currentToken == ArgSeparator)
 				{
 					previousTokenType = TokenType.ArgSeparator;
 					bool foundOpeningParenthesis = false;
@@ -170,7 +179,7 @@ namespace Pinion.Compiler
 						else
 						{
 							operatorOnStack = operatorStack.Pop();
-							if (!Returns(ParseOperatorOrInstruction(container, operatorOnStack, output)))
+							if (!Returns(ParseOperatorOrInstruction(container, operatorOnStack, output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
 								break;
 						}
 					}
@@ -205,9 +214,9 @@ namespace Pinion.Compiler
 
 					OperatorInfo currentTokenOperator = OperatorLookup.GetOperatorInfo(currentToken);
 
-					while (ShouldResolveTopOfStackFirst(currentTokenOperator))
+					while (ShouldResolveTopOfStackFirst(currentTokenOperator, operatorStack))
 					{
-						if (!Returns(ParseOperatorOrInstruction(container, operatorStack.Pop(), output)))
+						if (!Returns(ParseOperatorOrInstruction(container, operatorStack.Pop(), output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
 							break;
 					}
 
@@ -220,7 +229,7 @@ namespace Pinion.Compiler
 				{
 					previousTokenType = TokenType.ParenthesisOpen;
 					operatorStack.Push(currentToken);
-					argumentCountStack.Push(0);
+					argsCountStack.Push(0);
 					interpretNextSubtractAsNegate = true;
 					continue;
 				}
@@ -243,7 +252,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							if (!Returns(ParseOperatorOrInstruction(container, poppedOperator, output)))
+							if (!Returns(ParseOperatorOrInstruction(container, poppedOperator, output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
 								break;
 						}
 					}
@@ -266,23 +275,22 @@ namespace Pinion.Compiler
 
 						if (PinionAPI.IsInstructionString(topOfStack)) // ... and that something represents an instruction...
 						{
-							if (!Returns(ParseOperatorOrInstruction(container, operatorStack.Pop(), output)))
+							if (!Returns(ParseOperatorOrInstruction(container, operatorStack.Pop(), output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
 								break;
 						}
 					}
 
-					int resultingArgCount = argumentCountStack.Pop();
-					AlterScopeArgCount(resultingArgCount);
+					int resultingArgCount = argsCountStack.Pop();
+					AlterScopeArgCount(resultingArgCount, argsCountStack);
 
 					interpretNextSubtractAsNegate = false;
 					continue;
 				}
 
-				if (Returns(ParseAtomicValue(container, currentToken, output)))
+				if (Returns(ParseAtomicValue(container, currentToken, output), argsCountStack, argsStack))
 				{
 					previousTokenType = TokenType.Atomic;
 					interpretNextSubtractAsNegate = false;
-
 				}
 				else
 				{
@@ -291,7 +299,7 @@ namespace Pinion.Compiler
 			}
 
 			if (!compileSuccess)
-				return null;
+				return CompilerArgument.Invalid;
 
 			while (operatorStack.Count > 0)
 			{
@@ -305,26 +313,26 @@ namespace Pinion.Compiler
 					break;
 				}
 
-				if (!Returns(ParseOperatorOrInstruction(container, operatorOnStack, output)))
+				if (!Returns(ParseOperatorOrInstruction(container, operatorOnStack, output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
 					break;
 			}
 
 			// If the expression compiled correctly, it should at most resolve to zero or one return value.
 			// If there's more left on the stack, something went wrong.
-			if (argumentStack.Count > 1)
+			if (argsStack.Count > 1)
 			{
 				AddCompileError($"Expression could not parsed correctly: {expression}.");
-				return null;
+				return CompilerArgument.Invalid;
 			}
 
 			// If it compiled correctly, either return the return value or void.
-			if (argumentStack.Count == 1)
-				return argumentStack.Pop();
+			if (argsStack.Count == 1)
+				return argsStack.Pop();
 			else
-				return typeof(void);
+				return new CompilerArgument(typeof(void), CompilerArgument.ArgSource.Complex);
 		}
 
-		private static Type ParseOperatorOrInstruction(PinionContainer container, string token, List<ushort> output)
+		private static CompilerArgument ParseOperatorOrInstruction(PinionContainer container, string token, List<ushort> output, Stack<int> argumentCountStack, Stack<CompilerArgument> argumentStack, List<CompilerArgument> storeArgsBuffer)
 		{
 			int argCount = 0;
 
@@ -343,14 +351,14 @@ namespace Pinion.Compiler
 				argCount = argumentCountStack.Peek(); // i.e. ALL arguments within this scope
 			}
 
-			ConsumeArguments(argCount);
+			ConsumeArguments(argCount, argumentStack, argumentCountStack, storeArgsBuffer);
 
-			return ParseInstruction(container, token, output, reuseArgsList);
+			return ParseInstruction(container, token, output, storeArgsBuffer);
 		}
 
-		private static void ConsumeArguments(int count)
+		private static void ConsumeArguments(int count, Stack<CompilerArgument> argumentStack, Stack<int> argumentCountStack, List<CompilerArgument> storeArgsBuffer)
 		{
-			reuseArgsList.Clear();
+			storeArgsBuffer.Clear();
 			int consumedArgs = 0;
 			for (int i = 0; i < count; i++)
 			{
@@ -359,38 +367,38 @@ namespace Pinion.Compiler
 				if (argumentStack.Count <= 0)
 					break;
 
-				reuseArgsList.Add(argumentStack.Pop());
+				storeArgsBuffer.Add(argumentStack.Pop());
 				consumedArgs++;
 			}
 
-			reuseArgsList.Reverse();
+			storeArgsBuffer.Reverse();
 
-			AlterScopeArgCount(-consumedArgs);
+			AlterScopeArgCount(-consumedArgs, argumentCountStack);
 		}
 
-		private static void AlterScopeArgCount(int amount)
+		private static void AlterScopeArgCount(int amount, Stack<int> argumentCountStack)
 		{
 			int argCountInCurrentScope = argumentCountStack.Pop();
 			argCountInCurrentScope += amount;
 			argumentCountStack.Push(argCountInCurrentScope);
 		}
 
-		private static bool Returns(Type returnedType)
+		private static bool Returns(CompilerArgument returnValue, Stack<int> argumentCountStack, Stack<CompilerArgument> argumentStack)
 		{
-			if (returnedType == null) // something failed - we return false so we can stop compilation
+			if (!returnValue.Valid) // something failed - we return false so we can stop compilation
 				return false;
 
 			// There was a return value - push it onto argumentStack to continue checking if everything resolves correctly.
-			if (returnedType != typeof(void))
+			if (!returnValue.IsArgumentTypeVoid)
 			{
-				argumentStack.Push(returnedType);
-				AlterScopeArgCount(1);
+				argumentStack.Push(returnValue);
+				AlterScopeArgCount(1, argumentCountStack);
 			}
 
 			return true;
 		}
 
-		private static bool ShouldResolveTopOfStackFirst(OperatorInfo currentToken)
+		private static bool ShouldResolveTopOfStackFirst(OperatorInfo currentToken, Stack<string> operatorStack)
 		{
 			// NOTE: We're using the terminology PRECEDENCE, literally: "going before something else".
 			// This means that the value should be interpreted "chronologically", i.e. the LOWEST value is the one that should be resolved FIRST.
@@ -439,7 +447,9 @@ namespace Pinion.Compiler
 
 			// Ignore any splitting for text enclosed in double quotes.
 			// This string is already correctly escaped (was necessary for C# anyway), so don't escape it below or it'll break the group constructs included.
-			builder.Append(CompilerRegex.matchQuoteText);
+			builder.Append(CompilerRegex.splitPreserveTextInQuotes);
+			builder.Append("|");
+			builder.Append(CompilerRegex.splitPreserveVariableWithIndexer);
 			builder.Append("|");
 
 			List<string> unEscapedSplitElements = new List<string>(32);

@@ -11,7 +11,7 @@ namespace Pinion.Compiler
 		private static List<InstructionData> instructionMatchBuffer = new List<InstructionData>(32); // reusable collection for string to instruction lookup results
 		private static Stack<System.Type> consumedArgumentsBuffer = new Stack<System.Type>(32); // reusable stack for arguments "consumed" by signature match checking
 
-		private static Type ParseInstruction(PinionContainer targetContainer, string instructionString, List<ushort> output, IList<System.Type> providedArguments)
+		private static CompilerArgument ParseInstruction(PinionContainer targetContainer, string instructionString, List<ushort> output, IList<CompilerArgument> providedArguments)
 		{
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.Log($"[PinionCompiler] Parsing instruction: \'{instructionString}\'");
@@ -26,7 +26,7 @@ namespace Pinion.Compiler
 			if (instructionMatchBuffer.Count < 1)
 			{
 				AddCompileError($"Unknown instruction: '{instructionString}.'");
-				return null;
+				return CompilerArgument.Invalid;
 			}
 
 			// We iterate over all potential matches, looking for a full match.
@@ -93,7 +93,7 @@ namespace Pinion.Compiler
 
 					for (int i = 0; i < providedArguments.Count; i++)
 					{
-						providedArgumentsString += TypeNameShortHands.GetSimpleTypeName(providedArguments[i]);
+						providedArgumentsString += TypeNameShortHands.GetSimpleTypeName(providedArguments[i].argumentType);
 
 						if (i < providedArguments.Count - 1)
 							providedArgumentsString += ", ";
@@ -105,7 +105,7 @@ namespace Pinion.Compiler
 				providedArguments.Clear();
 				AddCompileError(errorMessage);
 				// No chance of compiling something useful at this point. Compilation will fail.
-				return null;
+				return CompilerArgument.Invalid;
 			}
 
 			// Some instruction are internals only - they make the system itself function. We don't really want the player to know or care about these.
@@ -115,17 +115,31 @@ namespace Pinion.Compiler
 			{
 				providedArguments.Clear();
 				AddCompileError($"[PinionCompiler] Expression {instructionString} is reserved for internal use only.");
-				return null;
+				return CompilerArgument.Invalid;
 			}
 
-			// The actual final instruction code list!
-			output.Add(matchedInstruction.instructionCode);
+			bool ranFullCustomCompilation = matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.ReplaceInstruction, providedArguments, output);
+
+			// "Regular" compilation. If ranFullCustomCompilation is true, compilation was entirely managed by custom-purpose logic. (Very advanced uses cases only.)
+			if (!ranFullCustomCompilation)
+			{
+				// Custom compilation logic before the instruction proper. In most cases this will not be used.
+				matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.BeforeInstruction, providedArguments, output);
+
+				// Adding instruction code he actual final instruction code list!
+				output.Add(matchedInstruction.instructionCode);
+
+				// Custom compilation logic after the instruction proper. In most cases this will not be used.
+				matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction, providedArguments, output);
+			}
+
+
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.LogFormat($"[PinionCompiler] Parsed instruction {instructionString} to instruction {matchedInstruction.instructionCode}: {matchedInstruction.instructionString}.");
 #endif
 			providedArguments.Clear();
-			return matchedInstruction.returnType;
+			return new CompilerArgument(matchedInstruction.returnType, CompilerArgument.ArgSource.Complex);
 		}
 	}
 }

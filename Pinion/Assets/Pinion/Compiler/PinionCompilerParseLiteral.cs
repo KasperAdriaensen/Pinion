@@ -10,7 +10,7 @@ namespace Pinion.Compiler
 {
 	public partial class PinionCompiler
 	{
-		private static Type ParseLiteral(PinionContainer targetContainer, string literal, List<ushort> output)
+		private static CompilerArgument ParseLiteral(PinionContainer targetContainer, string literal, List<ushort> output)
 		{
 			// General process for a valid literal.
 			// Add a bytecode instruction indicating the next instruction code is to be interpreted as a literal. The associated function will know how to interpret that.
@@ -19,130 +19,171 @@ namespace Pinion.Compiler
 			// Finally, push a type to the compiler stack.
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			Debug.Log($"[PinionCompiler] Parsing literal: \'{literal}\'");
+			Debug.Log($"[PinionCompiler] Parsing literal read: \'{literal}\'");
 #endif
 
 			if (string.IsNullOrEmpty(literal)) // Not sure this would be currently possible, but it can't harm to check.
 			{
 				AddCompileError("Literal value was empty!");
-				return null;
+				return CompilerArgument.Invalid;
 			}
 
-			// First off: figure out what type of literal we're looking at.
-			// There is, as far as I'm aware, no nice and clean way to figure out what type a string represents. That makes sense.
-			// So instead, we just put the picture together as well as we can, successively testing different literal types, trying to be as efficient as possible.
-
-			// First one's easy. If the expression start with a quotation mark, it has to be a string. At best, it won't parse as anything else anyway.
-			if (literal.StartsWith("\""))
+			if (ParseLiteralString(literal, out string resultString))
 			{
-				// It could be a broken string, though. If there aren't any closing quotation marks, any whitespace in the string has already been removed by the parser and it's nonsense anyway.
-				if (!literal.EndsWith("\""))
-				{
-					AddCompileError($"String {literal} has no closing quotation mark.");
-					return null;
-				}
-
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.LogFormat("[PinionCompiler] Parsed literal as string: {0}", literal);
-#endif
-
-				literal = literal.Trim('"');
-
-				if (targetContainer.StringRegister.RegisterValue(literal, out ushort index, true))
+				if (targetContainer.StringRegister.RegisterValue(resultString, out ushort index, true))
 				{
 					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadString).instructionCode);
 					output.Add(index);
-					return typeof(string);
+					return new CompilerArgument(typeof(string), CompilerArgument.ArgSource.Literal);
 				}
 				else
 				{
 					AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(string))}.");
-					return null;
+					return CompilerArgument.Invalid;
 				}
 			}
-			else if (literal == "false" || literal == "true")
+			else if (ParseLiteralBool(literal, out bool resultBool))
 			{
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.LogFormat($"[PinionCompiler] Parsed literal as bool ({literal}): {0}", literal);
-#endif
-				bool result = (literal == "true");
-
-				if (targetContainer.BoolRegister.RegisterValue(result, out ushort index, true))
+				if (targetContainer.BoolRegister.RegisterValue(resultBool, out ushort index, true))
 				{
 					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadBool).instructionCode);
 					output.Add(index);
-					return typeof(bool);
+					return new CompilerArgument(typeof(bool), CompilerArgument.ArgSource.Literal);
 				}
 				else
 				{
 					AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
-					return null;
+					return CompilerArgument.Invalid;
 				}
 			}
-			else if (Regex.IsMatch(literal, CompilerRegex.validIntRegex))
+			else if (ParseLiteralInt(literal, out int resultInt))
 			{
-				int result = 0;
-
-				if (!int.TryParse(literal, NumberStyles.Integer, CultureInfo.InvariantCulture, out result))
-				{
-					AddCompileError($"Could not interpret \"{literal}\" as an int.");
-					return null;
-				}
-
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.LogFormat("[PinionCompiler] Parsed literal as int: {0}", literal);
-#endif
-
 				// TODO: Possible optimization: we could store positive ints smaller than ushort.MaxValue directly in the instruction code.
 				// Then again, that would just raise complexity and would be less consistent.
 
-				if (targetContainer.IntRegister.RegisterValue(result, out ushort index, true))
+				if (targetContainer.IntRegister.RegisterValue(resultInt, out ushort index, true))
 				{
 					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadInt).instructionCode);
 					output.Add(index);
-					return typeof(int);
+					return new CompilerArgument(typeof(int), CompilerArgument.ArgSource.Literal);
 				}
 				else
 				{
 					AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}.");
-					return null;
+					return CompilerArgument.Invalid;
 				}
 			}
-			else if (Regex.IsMatch(literal, CompilerRegex.validFloatRegex)) // See pattern declaration for valid float formats.
+			else if (ParseLiteralFloat(literal, out float resultFloat))
 			{
-				literal = literal.Trim('f');
-				float result = 0f;
-
-				if (!float.TryParse(literal, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
-				{
-					AddCompileError($"Could not interpret \"{literal}\" as a float.");
-					return null;
-				}
-
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.LogFormat("[PinionCompiler] Parsed literal as float: {0}", literal);
-#endif
-
-				if (targetContainer.FloatRegister.RegisterValue(result, out ushort index, true))
+				if (targetContainer.FloatRegister.RegisterValue(resultFloat, out ushort index, true))
 				{
 					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadFloat).instructionCode);
 					output.Add(index);
-					return typeof(float);
+					return new CompilerArgument(typeof(float), CompilerArgument.ArgSource.Literal);
 				}
 				else
 				{
 					AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(float))}.");
-					return null;
+					return CompilerArgument.Invalid;
 				}
 			}
 			else
 			{
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.LogFormat("[PinionCompiler] Parsed literal as unrecognized: {0}", literal);
+				Debug.LogFormat($"Parsed literal as unrecognized: '{literal}'.");
 #endif
 				AddCompileError($"Unrecognized literal: {literal}");
-				return null;
+				return CompilerArgument.Invalid;
 			}
+		}
+
+		private static bool ParseLiteralString(string literal, out string result)
+		{
+			result = string.Empty;
+
+			if (!literal.StartsWith("\""))
+				return false;
+
+			// It could be a broken string, though. If there aren't any closing quotation marks, any whitespace in the string has already been removed by the parser and it's nonsense anyway.
+			if (!literal.EndsWith("\""))
+			{
+				AddCompileError($"String {literal} has no closing quotation mark.");
+				return false;
+			}
+
+			result = literal.Trim('"');
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.LogFormat($"Parsed literal as string: {literal}.");
+#endif
+			return true;
+		}
+
+		private static bool ParseLiteralBool(string literal, out bool result)
+		{
+			// Why not just use bool.Parse? Oddly C# expects True/False (capitalized) as input. Not lower case true/false.
+			// https://stackoverflow.com/questions/491334/why-does-boolean-tostring-output-true-and-not-true
+
+			if (literal == "true")
+			{
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+				Debug.LogFormat($"Parsed literal as bool: '{literal}'.");
+#endif
+				result = true;
+				return true;
+			}
+
+			if (literal == "false")
+			{
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+				Debug.LogFormat($"Parsed literal as bool: '{literal}'.");
+#endif
+				result = false;
+				return true;
+			}
+
+			result = false;
+			return false;
+		}
+
+		private static bool ParseLiteralInt(string literal, out int result)
+		{
+			result = 0;
+
+			if (!Regex.IsMatch(literal, CompilerRegex.validIntRegex)) // See pattern declaration for valid int formats.
+				return false;
+
+			if (!int.TryParse(literal, NumberStyles.Integer, CultureInfo.InvariantCulture, out result))
+			{
+				AddCompileError($"Could not interpret '{literal}' as an int.");
+				return false;
+			}
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.LogFormat($"Parsed literal as int: '{literal}'.");
+#endif
+			return true;
+		}
+
+		private static bool ParseLiteralFloat(string literal, out float result)
+		{
+			result = 0f;
+
+			if (!Regex.IsMatch(literal, CompilerRegex.validFloatRegex)) // See pattern declaration for valid float formats.
+				return false;
+
+			literal = literal.TrimEnd('f', 'F');
+
+			if (!float.TryParse(literal, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+			{
+				AddCompileError($"Could not interpret '{literal}' as a float.");
+				return false;
+			}
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.LogFormat($"Parsed literal as float: '{literal}'.");
+#endif
+			return true;
 		}
 	}
 }

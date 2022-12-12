@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using Pinion.Compiler.Internal;
 using UnityEngine;
@@ -91,58 +93,200 @@ namespace Pinion.Compiler
 				return;
 			}
 
+			bool isArray = false;
+			int arraySize = 0;
+			string arrayInitializerString = null;
+
+			if (typeIdentifier.EndsWith(CompilerConstants.ArrayIndexerEmpty))
+			{
+				typeIdentifier = typeIdentifier.Substring(0, typeIdentifier.Length - CompilerConstants.ArrayIndexerEmpty.Length);
+				isArray = true;
+
+				if (string.IsNullOrEmpty(valueExpression))
+				{
+					AddCompileError("Array declaration requires a third argument: either an array size (e.g. 'set(string[], $myArray, 2)') or an initializer (e.g. 'set(string[], $myArray, {\"hello\", \"world\"})').");
+					return;
+				}
+
+				// matches pattern "{x,y,z,...}"
+				Match initializerMatch = Regex.Match(valueExpression, CompilerRegex.arrayInitializerRegex);
+
+				if (initializerMatch.Success)
+				{
+					arrayInitializerString = initializerMatch.Groups[1].Value; // remove curly braces
+				}
+				else if (int.TryParse(valueExpression, out int result))
+				{
+					arraySize = result;
+					if (arraySize < 1)
+					{
+						AddCompileError("Array size must greater than 0.");
+						return;
+					}
+				}
+				else
+				{
+					AddCompileError("Could not interpret third argument for array declaration. Must be either an array size (e.g. 'set(string[], $myArray, 2)') or an initializer (e.g. 'set(string[], $myArray, {\"hello\", \"world\"})').");
+					return;
+				}
+			}
+
 			ushort index = 0;
 
 			switch (typeIdentifier)
 			{
-
 				case "int":
-					if (targetContainer.IntRegister.RegisterValue(out index, false, externalVariableName))
+					if (isArray)
 					{
-						variableNameToPointerMappings.Add(variableName, new VariablePointer<int>(index));
+						int[] initValues = null;
+
+						if (!string.IsNullOrEmpty(arrayInitializerString))
+						{
+							initValues = InitializerToArray<int>(arrayInitializerString, ParseLiteralInt);
+						}
+						else if (arraySize > 0)
+						{
+							initValues = Enumerable.Repeat<int>(default(int), arraySize).ToArray();
+						}
+
+						if (targetContainer.IntRegister.RegisterArray(out index, initValues))
+						{
+							variableNameToPointerMappings.Add(variableName, new VariablePointer<int>(index, initValues.Length));
+						}
+						else
+						{
+							AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}.");
+							return;
+						}
 					}
 					else
 					{
-						AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(string))}.");
-						return;
+						if (targetContainer.IntRegister.RegisterValue(out index, false, externalVariableName))
+						{
+							variableNameToPointerMappings.Add(variableName, new VariablePointer<int>(index));
+						}
+						else
+						{
+							AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}.");
+							return;
+						}
 					}
 					break;
 
 				case "float":
-					if (targetContainer.FloatRegister.RegisterValue(out index, false, externalVariableName))
+					if (isArray)
 					{
-						variableNameToPointerMappings.Add(variableName, new VariablePointer<float>(index));
+						float[] initValues = null;
+
+						if (!string.IsNullOrEmpty(arrayInitializerString))
+						{
+							initValues = InitializerToArray<float>(arrayInitializerString, ParseLiteralFloat);
+						}
+						else if (arraySize > 0)
+						{
+							initValues = Enumerable.Repeat<float>(default(float), arraySize).ToArray();
+						}
+
+						if (targetContainer.FloatRegister.RegisterArray(out index, initValues))
+						{
+							variableNameToPointerMappings.Add(variableName, new VariablePointer<float>(index, initValues.Length));
+						}
+						else
+						{
+							AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(float))}.");
+							return;
+						}
 					}
 					else
 					{
-						AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(float))}.");
-						return;
+						if (targetContainer.FloatRegister.RegisterValue(out index, false, externalVariableName))
+						{
+							variableNameToPointerMappings.Add(variableName, new VariablePointer<float>(index));
+						}
+						else
+						{
+							AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(float))}.");
+							return;
+						}
 					}
 
 					break;
 
 				case "bool":
-					if (targetContainer.BoolRegister.RegisterValue(out index, false, externalVariableName))
+					if (isArray)
 					{
-						variableNameToPointerMappings.Add(variableName, new VariablePointer<bool>(index));
+						bool[] initValues = null;
+
+						if (!string.IsNullOrEmpty(arrayInitializerString))
+						{
+							initValues = InitializerToArray<bool>(arrayInitializerString, ParseLiteralBool);
+						}
+						else if (arraySize > 0)
+						{
+							initValues = Enumerable.Repeat<bool>(default(bool), arraySize).ToArray();
+						}
+
+						if (targetContainer.BoolRegister.RegisterArray(out index, initValues))
+						{
+							variableNameToPointerMappings.Add(variableName, new VariablePointer<bool>(index, initValues.Length));
+						}
+						else
+						{
+							AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+							return;
+						}
 					}
 					else
 					{
-						AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
-						return;
+						if (targetContainer.BoolRegister.RegisterValue(out index, false, externalVariableName))
+						{
+							variableNameToPointerMappings.Add(variableName, new VariablePointer<bool>(index));
+						}
+						else
+						{
+							AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+							return;
+						}
 					}
 					break;
 
 				case "string":
-					// declare with default string.empty, so we don't have to care about null refs in a language where null isn't really a thing
-					if (targetContainer.StringRegister.RegisterValue(string.Empty, out index, false, externalVariableName))
+					if (isArray)
 					{
-						variableNameToPointerMappings.Add(variableName, new VariablePointer<string>(index));
+						string[] initValues = null;
+
+						if (!string.IsNullOrEmpty(arrayInitializerString))
+						{
+							initValues = InitializerToArray<string>(arrayInitializerString, ParseLiteralString);
+						}
+						else if (arraySize > 0)
+						{
+							// declare with default string.empty, so we don't have to care about null refs in a language where null isn't really a thing
+							initValues = Enumerable.Repeat<string>(string.Empty, arraySize).ToArray();
+						}
+
+						if (targetContainer.StringRegister.RegisterArray(out index, initValues))
+						{
+							variableNameToPointerMappings.Add(variableName, new VariablePointer<string>(index, initValues.Length));
+						}
+						else
+						{
+							AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(string))}.");
+							return;
+						}
 					}
 					else
 					{
-						AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(string))}.");
-						return;
+						// declare with default string.empty, so we don't have to care about null refs in a language where null isn't really a thing
+						if (targetContainer.StringRegister.RegisterValue(string.Empty, out index, false, externalVariableName))
+						{
+							variableNameToPointerMappings.Add(variableName, new VariablePointer<string>(index));
+						}
+						else
+						{
+							AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(string))}.");
+							return;
+						}
 					}
 
 					break;
@@ -157,37 +301,85 @@ namespace Pinion.Compiler
 #endif
 
 			// optional default value
-			if (!string.IsNullOrEmpty(valueExpression))
+			if (!isArray && !string.IsNullOrEmpty(valueExpression))
 				ParseVariableWrite(targetContainer, variableName, valueExpression);
 		}
 
-		private static Type ParseVariableRead(string variableName, List<ushort> output)
+		private static CompilerArgument ParseVariableRead(PinionContainer targetContainer, string variableToken, List<ushort> output)
 		{
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.Log($"[PinionCompiler] Parsing variable read: \'{variableToken}\'");
+#endif
+			// Test: is array name followed by "[int]"?.
+			Match arrayIndexerMatch = Regex.Match(variableToken, CompilerRegex.arrayIndexerRegex);
+			bool accessingArray = false;
+			//	int arrayIndex = 0;
+
+			if (arrayIndexerMatch.Success)
+			{
+				string indexExpression = arrayIndexerMatch.Groups[1].Value; // everything between [ and ]
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+				Debug.Log($"[PinionCompiler] Parsing array index expression: \'{indexExpression}\'");
+#endif
+
+				CompilerArgument indexerReturnValue = ParseExpression(targetContainer, indexExpression);
+
+				if (!compileSuccess) // If indexExpression could not be parsed, compilation will already have failed with a (hopefully) meaningful message.
+					return CompilerArgument.Invalid;
+
+				if (indexerReturnValue.argumentType != typeof(int)) // return is null or something other than expectedType
+				{
+					if (indexerReturnValue.IsArgumentTypeVoid)
+					{
+						AddCompileError(string.Format($"Expression used as array index returns no value."));
+					}
+					else
+					{
+						AddCompileError(string.Format($"Cannot use {TypeNameShortHands.GetSimpleTypeName(indexerReturnValue.argumentType)} as array index. Array index must be of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}."));
+					}
+
+					return CompilerArgument.Invalid;
+				}
+
+				accessingArray = true;
+				variableToken = variableToken.Substring(0, variableToken.Length - arrayIndexerMatch.Length); // remove indexer
+			}
+
 			// The process for declaring, defining and retrieving variables is largely the same as that for literals, with the exception that the same register index is used repeatedly,
 			// rather than a unique index per literal. For an in depth explanation of the process, look at literal parsing.
 
-			if (!IsValidVariableName(variableName))
+			if (!IsValidVariableName(variableToken))
 			{
-				AddCompileError($"Invalid variable name: {variableName}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
-				return null;
+				AddCompileError($"Invalid variable name: {variableToken}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
+				return CompilerArgument.Invalid;
 			}
 
-			if (!IsVariableDeclared(variableName))
+			if (!IsVariableDeclared(variableToken))
 			{
-				AddCompileError($"Undeclared variable: {variableName}. A variable must be declared before it can be referenced.");
-				return null;
+				AddCompileError($"Undeclared variable: {variableToken}. A variable must be declared before it can be referenced.");
+				return CompilerArgument.Invalid;
 			}
 
-			IVariablePointer pointer = variableNameToPointerMappings[variableName];
+			IVariablePointer pointer = variableNameToPointerMappings[variableToken];
+
+			if (accessingArray)
+			{
+				if (!pointer.IsArray)
+				{
+					AddCompileError($"Variable {variableToken} is not an array.");
+					return CompilerArgument.Invalid;
+				}
+			}
 
 			output.Add(pointer.GetReadInstruction().instructionCode);
 			output.Add(pointer.GetIndexInRegister());
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			Debug.Log($"[PinionCompiler] Parsed variable read: variable {variableName} of type {pointer.GetValueType().ToString()}.");
+			Debug.Log($"[PinionCompiler] Parsed variable read: variable {variableToken} of type {pointer.GetValueType().ToString()}.");
 #endif
 
-			return pointer.GetValueType();
+			return new CompilerArgument(pointer.GetValueType(), CompilerArgument.ArgSource.Variable);
 		}
 
 		private static void ParseVariableAssign(PinionContainer targetContainer, string argumentsString)
@@ -203,39 +395,91 @@ namespace Pinion.Compiler
 			ParseVariableWrite(targetContainer, variableName, otherArguments);
 		}
 
-		private static void ParseVariableWrite(PinionContainer targetContainer, string variableName, string valueExpression)
+		private static void ParseVariableWrite(PinionContainer targetContainer, string variableToken, string valueExpression)
 		{
-			if (!IsValidVariableName(variableName))
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.Log($"[PinionCompiler] Parsing variable read: \'{variableToken}\'");
+#endif
+			// Test: is array name followed by "[int]"?.
+			Match arrayIndexerMatch = Regex.Match(variableToken, CompilerRegex.arrayIndexerRegex);
+			bool accessingArray = false;
+			//	int arrayIndex = 0;
+
+			if (arrayIndexerMatch.Success)
 			{
-				AddCompileError($"Invalid variable name: {variableName}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
+				string indexExpression = arrayIndexerMatch.Groups[1].Value; // everything between [ and ]
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+				Debug.Log($"[PinionCompiler] Parsing array index expression: \'{indexExpression}\'");
+#endif
+
+				CompilerArgument indexerReturnValue = ParseExpression(targetContainer, indexExpression);
+
+				if (!compileSuccess) // If indexExpression could not be parsed, compilation will already have failed with a (hopefully) meaningful message.
+					return;
+
+				if (indexerReturnValue.argumentType != typeof(int)) // return is null or something other than expectedType
+				{
+					if (indexerReturnValue.IsArgumentTypeVoid)
+					{
+						AddCompileError(string.Format($"Expression used as array index returns no value."));
+					}
+					else
+					{
+						AddCompileError(string.Format($"Cannot use {TypeNameShortHands.GetSimpleTypeName(indexerReturnValue.argumentType)} as array index. Array index must be of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}."));
+					}
+
+					return;
+				}
+
+				accessingArray = true;
+				variableToken = variableToken.Substring(0, variableToken.Length - arrayIndexerMatch.Length); // remove indexer
+			}
+
+			if (!IsValidVariableName(variableToken))
+			{
+				AddCompileError($"Invalid variable name: {variableToken}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
 				return;
 			}
 
-			if (!IsVariableDeclared(variableName))
+			if (!IsVariableDeclared(variableToken))
 			{
-				AddCompileError($"Undeclared variable: {variableName}. A variable must be declared before it can be used.");
+				AddCompileError($"Undeclared variable: {variableToken}. A variable must be declared before it can be used.");
 				return;
 			}
 
-			IVariablePointer pointer = variableNameToPointerMappings[variableName];
-			Type returnType = ParseExpression(targetContainer, valueExpression);
+			IVariablePointer pointer = variableNameToPointerMappings[variableToken];
+			CompilerArgument returnValue = ParseExpression(targetContainer, valueExpression);
 
 			if (!compileSuccess) // if valueExpression could not be parsed, compilation will already have failed with a (hopefully) meaningful message
 				return;
 
 			System.Type expectedType = pointer.GetValueType();
-			if (returnType != expectedType) // return is null or something other than expectedType
+			if (returnValue.argumentType != expectedType) // return is null or something other than expectedType
 			{
-				if (returnType == typeof(void))
+				if (returnValue.IsArgumentTypeVoid)
+				{
 					AddCompileError(string.Format($"Expression in the variable assignment returns no value."));
+				}
 				else
-					AddCompileError(string.Format($"Cannot assign a value of type {TypeNameShortHands.GetSimpleTypeName(returnType)} to variable {variableName}, of type {TypeNameShortHands.GetSimpleTypeName(expectedType)}."));
+				{
+					AddCompileError(string.Format($"Cannot assign a value of type {TypeNameShortHands.GetSimpleTypeName(returnValue.argumentType)} to variable {variableToken}, of type {TypeNameShortHands.GetSimpleTypeName(expectedType)}."));
+				}
+
 				return;
 			}
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			Debug.Log($"[PinionCompiler] Parsing variable write. Writing '{valueExpression}' to variable {variableName}.");
+			Debug.Log($"[PinionCompiler] Parsing variable write. Writing '{valueExpression}' to variable {variableToken}.");
 #endif
+			if (accessingArray)
+			{
+				if (!pointer.IsArray)
+				{
+					AddCompileError($"Variable {variableToken} is not an array.");
+					return;
+				}
+			}
 
 			targetContainer.scriptInstructions.Add(pointer.GetWriteInstruction().instructionCode);
 			targetContainer.scriptInstructions.Add(pointer.GetIndexInRegister());
@@ -255,6 +499,105 @@ namespace Pinion.Compiler
 		private static bool IsExternalVariable(string input)
 		{
 			return input.StartsWith("$$");
+		}
+
+		private delegate bool InitializerParser<T>(string token, out T returnValue);
+
+		private static T[] InitializerToArray<T>(string initializerString, InitializerParser<T> parser)
+		{
+			if (string.IsNullOrEmpty(initializerString))
+			{
+				return null;
+			}
+
+			List<T> values = new List<T>();
+
+			// split either on a quoted string or on a comma
+			string[] split = Regex.Split(initializerString, $"({CompilerRegex.arrayInitializerSplitRegex2})"); // Surround regex with a capture group so the split string *also* includes the delimiters themselves.
+			StringBuilder builder = new StringBuilder();
+
+			// bool inString = false;
+			// string completedString = null;
+
+			// for (int i = 0; i < initializerString.Length; i++)
+			// {
+			// 	char currentChar = initializerString[i];
+			// 	completedString = null;
+
+			// 	// Final argument
+			// 	if (i == initializerString.Length - 1)
+			// 	{
+			// 		if (currentChar == ',')
+			// 		{
+			// 			AddCompileError($"Missing final item in initializer.");
+			// 			break;
+			// 		}
+
+			// 		builder.Append(currentChar);
+			// 		completedString = builder.ToString();
+			// 	}
+			// 	else if (currentChar == ',' && !inString)
+			// 	{
+			// 		completedString = builder.ToString();
+			// 		builder.Clear();
+			// 	}
+			// 	else if (currentChar == '"')
+			// 	{
+			// 		inString = !inString;
+			// 		completedString = builder.ToString();
+			// 		builder.Clear();
+			// 		builder.Append(currentChar);
+			// 	}
+			// 	else
+			// 	{
+			// 		builder.Append(currentChar);
+			// 	}
+
+			// 	if (completedString != null)
+			// 		AddItem(completedString);
+
+			// 	if (!compileSuccess)
+			// 		break;
+			// }
+
+			for (int i = 0; i < split.Length; i++)
+			{
+				string currentString = split[i];
+
+				if (string.IsNullOrEmpty(currentString))
+					continue;
+
+				if (currentString == PinionCompiler.ArgSeparator)
+				{
+					if (i == initializerString.Length - 1)
+					{
+						AddCompileError($"Missing final item in initializer.");
+						break;
+					}
+
+					continue;
+				}
+
+				AddItem(currentString);
+
+				if (!compileSuccess)
+					break;
+			}
+
+			return values.ToArray();
+
+			// Nested function
+			void AddItem(string input)
+			{
+				if (parser(input, out T resultValue))
+				{
+					values.Add(resultValue);
+				}
+				else
+				{
+					AddCompileError($"Could not parse '{input}' as {TypeNameShortHands.GetSimpleTypeName(typeof(T))}. Array initializer can contain literal values only.");
+				}
+			}
 		}
 	}
 }

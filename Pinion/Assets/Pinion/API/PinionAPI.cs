@@ -8,6 +8,7 @@ using Pinion.Compiler.Internal;
 using System.Linq.Expressions;
 using System.Linq;
 using System;
+using Pinion.ContainerMemory;
 
 namespace Pinion
 {
@@ -22,13 +23,21 @@ namespace Pinion
 
 		public const int MaxParameterCount = 16;
 		private const ushort firstCustomInstructionCode = 16; // Leave some unoccupied for safety/futureproofing.
-		private static bool alreadyBuilt = false;
+		private static bool attemptedBuild = false;
 		private static bool buildSuccess = false;
+
+		public static bool BuiltSuccessfully
+		{
+			get
+			{
+				return attemptedBuild && buildSuccess;
+			}
+		}
 
 		private static InstructionData[] instructionLookUpTable = null;
 		private static Dictionary<string, List<InstructionData>> instructionStringsLookup = new Dictionary<string, List<InstructionData>>();
 		private static Dictionary<string, InstructionData> internalIdentifierLookup = new Dictionary<string, InstructionData>();
-		private static object[] instructionParametersReuse = new object[MaxParameterCount];
+		private static StackValue[] instructionParametersReuse = new StackValue[MaxParameterCount];
 
 		public const string InternalIDReadInt = "InternalReadInt";
 		public const string InternalIDReadFloat = "InternalReadFloat";
@@ -38,6 +47,16 @@ namespace Pinion
 		public const string InternalIDWriteFloat = "InternalWriteFloat";
 		public const string InternalIDWriteBool = "InternalWriteBool";
 		public const string InternalIDWriteString = "InternalWriteString";
+
+		public const string InternalIDReadIntArray = "InternalReadIntArray";
+		public const string InternalIDReadFloatArray = "InternalReadFloatArray";
+		public const string InternalIDReadBoolArray = "InternalReadBoolArray";
+		public const string InternalIDReadStringArray = "InternalReadStringArray";
+		public const string InternalIDWriteIntArray = "InternalWriteIntArray";
+		public const string InternalIDWriteFloatArray = "InternalWriteFloatArray";
+		public const string InternalIDWriteBoolArray = "InternalWriteBoolArray";
+		public const string InternalIDWriteStringArray = "InternalWriteStringArray";
+
 		public const string InternalIDReadLabel = "InternalReadLabel";
 		public const string InternalIDIfFalseGoTo = "InternalIfFalseGoTo";
 		public const string InternalIDGoTo = "InternalGoTo";
@@ -72,7 +91,7 @@ namespace Pinion
 
 		public static bool BuildAPI(System.Action<string> errorMessageReceiver)
 		{
-			if (alreadyBuilt)
+			if (attemptedBuild)
 				return buildSuccess;
 
 			instructionStringsLookup.Clear();
@@ -114,7 +133,7 @@ namespace Pinion
 					}
 
 					// Several instructions can share the same instruction string, but with a different parameter signature (overloads). 
-					// This means one string can have multiple potential matches. Here we build a Dictionary<string, InstructionaData> to reflect this 1-to-n relationship.
+					// This means one string can have multiple potential matches. Here we build a Dictionary<string, InstructionData> to reflect this 1-to-n relationship.
 					// NOTE: Resolving string match to the right signature *ONLY* happens at compile time. 
 
 					if (instructionStringsLookup.ContainsKey(instructionString))
@@ -212,6 +231,7 @@ namespace Pinion
 			}
 
 			buildSuccess = overallSuccess;
+			attemptedBuild = true;
 
 			Debug.Log($"API built succesfully. {builtInstructions.Count} API functions discovered.");
 			return overallSuccess;
@@ -239,7 +259,7 @@ namespace Pinion
 
 			if (compileData.requiresContainer)
 			{
-				instructionParametersReuse[0] = callingContainer; // the container is never on the stack
+				instructionParametersReuse[0] = callingContainer.StackWrapper; // the container is never on the stack
 
 				// Arguments are on the stack in "reverse" order. First popped argument is the last one!
 				// start from compileData.parameterCount -> first index is (skipped index 0) + (compileData.parameterCount-1)

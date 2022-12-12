@@ -19,9 +19,6 @@ namespace Pinion.Compiler.Internal
 
 		public const string VariablePrefix = "$";
 
-		public const string VariableDeclare = "Declare(";
-		public const string VariableSet = "Set(";
-
 		public const string InitBeginMarker = "#INIT";
 		public const string InitEndMarker = "#END_INIT";
 
@@ -35,5 +32,12 @@ namespace Pinion.Compiler.Internal
 		public const string FunctionEndMarker = "#END_FUNCTION";
 
 		public const string LineNumberInsert = "#{0}#"; // Must match LineNumberRegex with {0} being a line number int
+
+		public const string ArrayIndexerOpen = "[";
+		public const string ArrayIndexerClose = "]";
+		public const string ArrayIndexerEmpty = ArrayIndexerOpen + ArrayIndexerClose;
+
+		public const string ArrayInitializerOpen = "{";
+		public const string ArrayInitializerClose = "}";
 	}
 }

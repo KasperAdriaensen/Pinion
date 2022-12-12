@@ -4,6 +4,7 @@ using UnityEngine;
 using Pinion;
 using ArgList = System.Collections.ObjectModel.ReadOnlyCollection<System.Type>; // This was getting lengthy.
 using Pinion.Documentation;
+using Pinion.Compiler.Internal;
 
 namespace Pinion
 {
@@ -38,6 +39,50 @@ namespace Pinion
 		{
 			return valueA + valueB;
 		}
+
+		// [APIMethod]
+		// [DocMethodOperatorReplace("++")]
+		// public static float Increment(float value)
+		// {
+		// 	return ++value;
+		// }
+
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[DocMethodOperatorReplace("++")]
+		public static int Increment(int value)
+		{
+			return ++value;
+		}
+
+		[APICustomCompileIdentifier]
+		private static void IncrementCompileHandler(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes)
+		{
+			// Compiler should already have ensured signature match at this point. 
+			// We can be reasonably sure there is exactly one argument of the right type.
+			if (providedArguments[0].argumentSource == CompilerArgument.ArgSource.Variable)
+			{
+				Debug.LogError("was a variavble!");
+			}
+
+			foreach (var type in providedArguments)
+			{
+				Debug.Log(type.argumentSource);
+			}
+
+
+		}
+
+		// [APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		// public static int IncrementPreVariable_Int(PinionContainer container)
+		// {
+		// 	ushort location = container.AdvanceToNextInstruction();
+		// 	int value = container.IntRegister.ReadValue(location) + 1;
+		// 	container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value);
+		// 	return value;
+		// }
+
+
 
 		[APIMethod]
 		[DocMethodOperatorReplace("-")]

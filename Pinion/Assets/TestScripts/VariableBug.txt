@@ -1,3 +1,0 @@
-#MAIN
-SetConnectionActive("c0", "f0", false)
-#END_MAIN
