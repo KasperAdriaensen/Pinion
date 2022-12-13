@@ -379,7 +379,7 @@ namespace Pinion.Compiler
 			Debug.Log($"[PinionCompiler] Parsed variable read: variable {variableToken} of type {pointer.GetValueType().ToString()}.");
 #endif
 
-			return new CompilerArgument(pointer.GetValueType(), CompilerArgument.ArgSource.Variable);
+			return new CompilerArgument(pointer);
 		}
 
 		private static void ParseVariableAssign(PinionContainer targetContainer, string argumentsString)

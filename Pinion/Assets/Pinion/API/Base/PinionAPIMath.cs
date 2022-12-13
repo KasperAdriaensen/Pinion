@@ -5,6 +5,7 @@ using Pinion;
 using ArgList = System.Collections.ObjectModel.ReadOnlyCollection<System.Type>; // This was getting lengthy.
 using Pinion.Documentation;
 using Pinion.Compiler.Internal;
+using Pinion.Internal;
 
 namespace Pinion
 {
@@ -39,50 +40,6 @@ namespace Pinion
 		{
 			return valueA + valueB;
 		}
-
-		// [APIMethod]
-		// [DocMethodOperatorReplace("++")]
-		// public static float Increment(float value)
-		// {
-		// 	return ++value;
-		// }
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("++")]
-		public static int Increment(int value)
-		{
-			return ++value;
-		}
-
-		[APICustomCompileIdentifier]
-		private static void IncrementCompileHandler(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes)
-		{
-			// Compiler should already have ensured signature match at this point. 
-			// We can be reasonably sure there is exactly one argument of the right type.
-			if (providedArguments[0].argumentSource == CompilerArgument.ArgSource.Variable)
-			{
-				Debug.LogError("was a variavble!");
-			}
-
-			foreach (var type in providedArguments)
-			{
-				Debug.Log(type.argumentSource);
-			}
-
-
-		}
-
-		// [APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		// public static int IncrementPreVariable_Int(PinionContainer container)
-		// {
-		// 	ushort location = container.AdvanceToNextInstruction();
-		// 	int value = container.IntRegister.ReadValue(location) + 1;
-		// 	container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value);
-		// 	return value;
-		// }
-
-
 
 		[APIMethod]
 		[DocMethodOperatorReplace("-")]
@@ -220,6 +177,49 @@ namespace Pinion
 		public static int Absolute(int number)
 		{
 			return Mathf.Abs(number);
+		}
+
+		// This essentially a dummy method. The ReplaceInstruction value on the APICustomCompileRequired means compilatio will *always* be replaced with custom compilation logic.
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementIntCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.ReplaceInstruction)]
+		[DocMethodOperatorReplace("++")]
+		public static int Increment(int value)
+		{
+			return ++value;
+		}
+
+		[APICustomCompileIdentifier]
+		private static void IncrementIntCompileHandler(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes)
+		{
+			// Compiler should already have ensured signature match at this point. 
+			// We can be reasonably sure there is exactly one argument of the right type.
+			CompilerArgument arg = providedArguments[0];
+
+			if (arg.argumentSource == CompilerArgument.ArgSource.Variable)
+			{
+				instructionCodes.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.IncrementIntVariablePrefix).instructionCode);
+				instructionCodes.Add(arg.variablePointer.GetIndexInRegister());
+			}
+			else
+			{
+				instructionCodes.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.IncrementIntLiteralPrefix).instructionCode);
+			}
+		}
+
+		[APIInternalMethodIdentifier(PinionAPIInternalIDs.IncrementIntVariablePrefix)]
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		public static int IncrementVariablePrefix(PinionContainer container, int value)
+		{
+			++value;
+			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value);
+			return value;
+		}
+
+		[APIInternalMethodIdentifier(PinionAPIInternalIDs.IncrementIntLiteralPrefix)]
+		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
+		public static int IncrementLiteralPrefix(int value)
+		{
+			return ++value;
 		}
 	}
 }

@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System;
 using Pinion.Compiler.Internal;
 using System.IO;
+using Pinion.Internal;
 
 namespace Pinion.Compiler
 {
@@ -228,7 +229,7 @@ namespace Pinion.Compiler
 						CurrentBlockContext = ScriptBlock.InitBlock;
 
 						// Event that enables calling custom logic on the script container on init start.
-						targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDInitBegin).instructionCode);
+						targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.InitBegin).instructionCode);
 						continue;
 					}
 					else if (line == CompilerConstants.InitEndMarker)
@@ -239,7 +240,7 @@ namespace Pinion.Compiler
 						CurrentBlockContext = ScriptBlock.None;
 
 						// Event that enables calling custom logic on the script container on init end.
-						targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDInitEnd).instructionCode);
+						targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.InitEnd).instructionCode);
 						continue;
 					}
 

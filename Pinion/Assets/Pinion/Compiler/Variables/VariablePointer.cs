@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Pinion.Internal;
 
 namespace Pinion.Compiler.Internal
 {
@@ -16,34 +17,34 @@ namespace Pinion.Compiler.Internal
 	{
 		private static Dictionary<System.Type, string> readIdentifiersPerType = new Dictionary<System.Type, string>
 		{
-			{typeof(int), PinionAPI.InternalIDReadInt},
-			{typeof(float), PinionAPI.InternalIDReadFloat},
-			{typeof(bool), PinionAPI.InternalIDReadBool},
-			{typeof(string), PinionAPI.InternalIDReadString},
+			{typeof(int), PinionAPIInternalIDs.ReadInt},
+			{typeof(float), PinionAPIInternalIDs.ReadFloat},
+			{typeof(bool), PinionAPIInternalIDs.ReadBool},
+			{typeof(string), PinionAPIInternalIDs.ReadString},
 		};
 
 		private static Dictionary<System.Type, string> writeIdentifiersPerType = new Dictionary<System.Type, string>
 		{
-			{typeof(int), PinionAPI.InternalIDWriteInt},
-			{typeof(float), PinionAPI.InternalIDWriteFloat},
-			{typeof(bool), PinionAPI.InternalIDWriteBool},
-			{typeof(string), PinionAPI.InternalIDWriteString},
+			{typeof(int), PinionAPIInternalIDs.WriteInt},
+			{typeof(float), PinionAPIInternalIDs.WriteFloat},
+			{typeof(bool), PinionAPIInternalIDs.WriteBool},
+			{typeof(string), PinionAPIInternalIDs.WriteString},
 		};
 
 		private static Dictionary<System.Type, string> readIdentifiersArrayPerType = new Dictionary<System.Type, string>
 		{
-			{typeof(int), PinionAPI.InternalIDReadIntArray},
-			{typeof(float), PinionAPI.InternalIDReadFloatArray},
-			{typeof(bool), PinionAPI.InternalIDReadBoolArray},
-			{typeof(string), PinionAPI.InternalIDReadStringArray},
+			{typeof(int), PinionAPIInternalIDs.ReadIntArray},
+			{typeof(float), PinionAPIInternalIDs.ReadFloatArray},
+			{typeof(bool), PinionAPIInternalIDs.ReadBoolArray},
+			{typeof(string), PinionAPIInternalIDs.ReadStringArray},
 		};
 
 		private static Dictionary<System.Type, string> writeIdentifiersArrayPerType = new Dictionary<System.Type, string>
 		{
-			{typeof(int), PinionAPI.InternalIDWriteIntArray},
-			{typeof(float), PinionAPI.InternalIDWriteFloatArray},
-			{typeof(bool), PinionAPI.InternalIDWriteBoolArray},
-			{typeof(string), PinionAPI.InternalIDWriteStringArray},
+			{typeof(int), PinionAPIInternalIDs.WriteIntArray},
+			{typeof(float), PinionAPIInternalIDs.WriteFloatArray},
+			{typeof(bool), PinionAPIInternalIDs.WriteBoolArray},
+			{typeof(string), PinionAPIInternalIDs.WriteStringArray},
 		};
 
 

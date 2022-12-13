@@ -1,6 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using Pinion.Internal;
 
 namespace Pinion
 {
@@ -8,7 +6,7 @@ namespace Pinion
 	public static class PinionAPIInternalFlowControl
 	{
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		[APIInternalMethodIdentifier(PinionAPI.InternalIDReadLabel)]
+		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadLabel)]
 		public static void ReadLabel(PinionContainer container)
 		{
 			int value = container.LabelRegister.ReadValue(container.AdvanceToNextInstruction());
@@ -16,7 +14,7 @@ namespace Pinion
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		[APIInternalMethodIdentifier(PinionAPI.InternalIDIfFalseGoTo)]
+		[APIInternalMethodIdentifier(PinionAPIInternalIDs.IfFalseGoTo)]
 		public static void IfFalseGoTo(PinionContainer container, bool condition)
 		{
 			int jumpLocation = container.PopJumpLocation();
@@ -28,7 +26,7 @@ namespace Pinion
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		[APIInternalMethodIdentifier(PinionAPI.InternalIDGoTo)]
+		[APIInternalMethodIdentifier(PinionAPIInternalIDs.InternalIDGoTo)]
 		public static void GoTo(PinionContainer container)
 		{
 			int jumpLocation = container.PopJumpLocation();

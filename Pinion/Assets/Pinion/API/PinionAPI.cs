@@ -39,33 +39,6 @@ namespace Pinion
 		private static Dictionary<string, InstructionData> internalIdentifierLookup = new Dictionary<string, InstructionData>();
 		private static StackValue[] instructionParametersReuse = new StackValue[MaxParameterCount];
 
-		public const string InternalIDReadInt = "InternalReadInt";
-		public const string InternalIDReadFloat = "InternalReadFloat";
-		public const string InternalIDReadBool = "InternalReadBool";
-		public const string InternalIDReadString = "InternalReadString";
-		public const string InternalIDWriteInt = "InternalWriteInt";
-		public const string InternalIDWriteFloat = "InternalWriteFloat";
-		public const string InternalIDWriteBool = "InternalWriteBool";
-		public const string InternalIDWriteString = "InternalWriteString";
-
-		public const string InternalIDReadIntArray = "InternalReadIntArray";
-		public const string InternalIDReadFloatArray = "InternalReadFloatArray";
-		public const string InternalIDReadBoolArray = "InternalReadBoolArray";
-		public const string InternalIDReadStringArray = "InternalReadStringArray";
-		public const string InternalIDWriteIntArray = "InternalWriteIntArray";
-		public const string InternalIDWriteFloatArray = "InternalWriteFloatArray";
-		public const string InternalIDWriteBoolArray = "InternalWriteBoolArray";
-		public const string InternalIDWriteStringArray = "InternalWriteStringArray";
-
-		public const string InternalIDReadLabel = "InternalReadLabel";
-		public const string InternalIDIfFalseGoTo = "InternalIfFalseGoTo";
-		public const string InternalIDGoTo = "InternalGoTo";
-		public const string InternalIDInitBegin = "InternalIDInitBegin";
-		public const string InternalIDInitEnd = "InternalIDInitEnd";
-		// Currently not used, easily restored.
-		// public const string InternalIDMainBegin = "InternalIDMainBegin";
-		// public const string InternalIDMainEnd = "InternalIDMainEnd";
-
 		// We don't do too much validation - most of this will be handled by the C-Sharp compiler anyway.
 		// Just checking we don't conflict with some internal keywords.
 		// Note: This is not for checking actual instructions! Actual internal instructions are checked in a more sophisticated way.
@@ -462,14 +435,6 @@ namespace Pinion
 				InstructionData data = instructionLookUpTable[instructionCode];
 				return data.internalInstruction ? null : data;
 			}
-		}
-
-		// To be used at script runtime, when compilation should already have ensured any referenced instructions exist and that 
-		// any internal instructions are only being called by the system itself.
-		// Any safety checks are therefore wasted performance.
-		public static InstructionData GetInstructionFast(ushort instructionCode)
-		{
-			return instructionLookUpTable[instructionCode];
 		}
 
 		public static bool IsSupportedPublicType(Type type)

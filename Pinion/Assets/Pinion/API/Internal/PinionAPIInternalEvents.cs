@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Pinion.Internal;
 using UnityEngine;
 
 namespace Pinion
@@ -8,14 +9,14 @@ namespace Pinion
 	public static class PinionAPIInternalEvents
 	{
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		[APIInternalMethodIdentifier(PinionAPI.InternalIDInitBegin)]
+		[APIInternalMethodIdentifier(PinionAPIInternalIDs.InitBegin)]
 		public static void InitBegin(PinionContainer container)
 		{
 			container.OnInitBegin();
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		[APIInternalMethodIdentifier(PinionAPI.InternalIDInitEnd)]
+		[APIInternalMethodIdentifier(PinionAPIInternalIDs.InitEnd)]
 		public static void InitEnd(PinionContainer container)
 		{
 			container.OnInitEnd();
@@ -23,14 +24,14 @@ namespace Pinion
 
 		// Currently not used, easily restored.
 		// 	[APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		// [APIInternalMethodIdentifier(PinionAPI.InternalIDMainBegin)]
+		// [APIInternalMethodIdentifier(PinionAPIInternalIDs.InternalIDMainBegin)]
 		// public static void MainBegin(PinionContainer container)
 		// {
 
 		// }
 
 		// 	[APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		// [APIInternalMethodIdentifier(PinionAPI.InternalIDMainEnd)]
+		// [APIInternalMethodIdentifier(PinionAPIInternalIDs.InternalIDMainEnd)]
 		// public static void MainEnd(PinionContainer container)
 		// {
 

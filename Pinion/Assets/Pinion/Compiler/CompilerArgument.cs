@@ -13,11 +13,18 @@ namespace Pinion.Compiler.Internal
 
 		public readonly Type argumentType;
 		public readonly ArgSource argumentSource;
+		public readonly IVariablePointer variablePointer;
 
 		public CompilerArgument(Type argumentType, ArgSource argumentSource)
 		{
 			this.argumentType = argumentType;
 			this.argumentSource = argumentSource;
+			this.variablePointer = null;
+		}
+
+		public CompilerArgument(IVariablePointer variablePointer) : this(variablePointer.GetValueType(), ArgSource.Variable)
+		{
+			this.variablePointer = variablePointer;
 		}
 
 		public static CompilerArgument Invalid

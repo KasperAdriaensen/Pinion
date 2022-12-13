@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Pinion.Compiler.Internal;
+using Pinion.Internal;
 using UnityEngine;
 
 namespace Pinion.Compiler
@@ -32,7 +33,7 @@ namespace Pinion.Compiler
 			{
 				if (targetContainer.StringRegister.RegisterValue(resultString, out ushort index, true))
 				{
-					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadString).instructionCode);
+					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadString).instructionCode);
 					output.Add(index);
 					return new CompilerArgument(typeof(string), CompilerArgument.ArgSource.Literal);
 				}
@@ -46,7 +47,7 @@ namespace Pinion.Compiler
 			{
 				if (targetContainer.BoolRegister.RegisterValue(resultBool, out ushort index, true))
 				{
-					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadBool).instructionCode);
+					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadBool).instructionCode);
 					output.Add(index);
 					return new CompilerArgument(typeof(bool), CompilerArgument.ArgSource.Literal);
 				}
@@ -63,7 +64,7 @@ namespace Pinion.Compiler
 
 				if (targetContainer.IntRegister.RegisterValue(resultInt, out ushort index, true))
 				{
-					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadInt).instructionCode);
+					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadInt).instructionCode);
 					output.Add(index);
 					return new CompilerArgument(typeof(int), CompilerArgument.ArgSource.Literal);
 				}
@@ -77,7 +78,7 @@ namespace Pinion.Compiler
 			{
 				if (targetContainer.FloatRegister.RegisterValue(resultFloat, out ushort index, true))
 				{
-					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadFloat).instructionCode);
+					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadFloat).instructionCode);
 					output.Add(index);
 					return new CompilerArgument(typeof(float), CompilerArgument.ArgSource.Literal);
 				}

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Pinion.Compiler.Internal;
+using Pinion.Internal;
 using UnityEngine;
 
 namespace Pinion.Compiler
@@ -74,7 +75,7 @@ namespace Pinion.Compiler
 			// The actual value, however, will always be filled a label declaration.
 			ushort locationInLabelRegister = GetOrCreateLabelRegisterValue(targetContainer, label);
 
-			output.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDReadLabel).instructionCode);
+			output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadLabel).instructionCode);
 			output.Add(locationInLabelRegister);
 		}
 
@@ -168,7 +169,7 @@ namespace Pinion.Compiler
 
 			// pops jump location from jump location stack and condition from standard stack
 			// if condition == false, will jump to jump location; if condition == true, will just continue with next instruction
-			targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDIfFalseGoTo).instructionCode);
+			targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.IfFalseGoTo).instructionCode);
 		}
 
 		private static void ParseLabelJump(PinionContainer targetContainer, string expression)
@@ -191,7 +192,7 @@ namespace Pinion.Compiler
 
 			// pops jump location from jump location stack
 			// then jumps to jump location
-			targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPI.InternalIDGoTo).instructionCode);
+			targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.InternalIDGoTo).instructionCode);
 		}
 	}
 }
