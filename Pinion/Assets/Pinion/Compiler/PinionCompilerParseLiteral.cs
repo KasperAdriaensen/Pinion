@@ -39,7 +39,7 @@ namespace Pinion.Compiler
 				}
 				else
 				{
-					AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(string))}.");
+					AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(string))}.");
 					return CompilerArgument.Invalid;
 				}
 			}
@@ -53,7 +53,7 @@ namespace Pinion.Compiler
 				}
 				else
 				{
-					AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+					AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(bool))}.");
 					return CompilerArgument.Invalid;
 				}
 			}
@@ -70,7 +70,7 @@ namespace Pinion.Compiler
 				}
 				else
 				{
-					AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}.");
+					AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(int))}.");
 					return CompilerArgument.Invalid;
 				}
 			}
@@ -84,7 +84,7 @@ namespace Pinion.Compiler
 				}
 				else
 				{
-					AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(float))}.");
+					AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(float))}.");
 					return CompilerArgument.Invalid;
 				}
 			}

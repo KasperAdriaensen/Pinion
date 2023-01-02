@@ -103,7 +103,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 			{
 				Type parameterType = foundParameters[i];
 
-				if (PinionAPI.IsSupportedPublicType(parameterType)) // No further checks required.
+				if (PinionTypes.IsSupportedPublicType(parameterType)) // No further checks required.
 					continue;
 
 				if (IsTypeOrSubtype(parameterType, typeof(PinionContainer)))
@@ -125,7 +125,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 
 			exposedParamsAmount = firstIsContainer ? foundParameters.Length - 1 : foundParameters.Length;
 
-			if (returnType != typeof(void) && !PinionAPI.IsSupportedPublicType(returnType))
+			if (returnType != typeof(void) && !PinionTypes.IsSupportedPublicType(returnType))
 				throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: API methods must return a supported type. Method returns {returnType}");
 
 			return foundParameters;

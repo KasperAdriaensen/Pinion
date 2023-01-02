@@ -162,7 +162,7 @@ namespace Pinion.Compiler
 				else
 				{
 
-					AddCompileError($"Invalid conditional statement. Expression resolves to type {TypeNameShortHands.GetSimpleTypeName(conditionReturnValue.argumentType)} instead type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+					AddCompileError($"Invalid conditional statement. Expression resolves to type {PinionTypes.GetPinionNameFromType(conditionReturnValue.argumentType)} instead type {PinionTypes.GetPinionNameFromType(typeof(bool))}.");
 				}
 				return;
 			}

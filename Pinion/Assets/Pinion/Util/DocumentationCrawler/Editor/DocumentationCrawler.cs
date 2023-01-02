@@ -181,7 +181,7 @@ namespace Pinion.Documentation
 					if (returnType != typeof(void))
 					{
 						stringBuilder.Append(" returns ");
-						stringBuilder.Append(FormatTypeName(TypeNameShortHands.GetSimpleTypeName(methodInfo.ReturnType)));
+						stringBuilder.Append(FormatTypeName(PinionTypes.GetPinionNameFromType(methodInfo.ReturnType)));
 
 					}
 
@@ -224,7 +224,7 @@ namespace Pinion.Documentation
 				if (parameterType == typeof(PinionContainer) || parameterType.IsSubclassOf(typeof(PinionContainer)))
 					continue;
 
-				stringBuilder.Append(FormatTypeName(TypeNameShortHands.GetSimpleTypeName(parameter.ParameterType)));
+				stringBuilder.Append(FormatTypeName(PinionTypes.GetPinionNameFromType(parameter.ParameterType)));
 				stringBuilder.Append(" ");
 
 				stringBuilder.Append(FormatParameterName(parameter.Name));
@@ -272,7 +272,7 @@ namespace Pinion.Documentation
 				// 	stringBuilder.Append(" ");
 				// }
 
-				stringBuilder.Append(FormatTypeName(TypeNameShortHands.GetSimpleTypeName(parameter.ParameterType)));
+				stringBuilder.Append(FormatTypeName(PinionTypes.GetPinionNameFromType(parameter.ParameterType)));
 				stringBuilder.Append(" ");
 
 				stringBuilder.Append(FormatParameterName(parameter.Name));

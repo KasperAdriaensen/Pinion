@@ -54,14 +54,6 @@ namespace Pinion
 			"endwhile"
 		};
 
-		private static HashSet<System.Type> supportedTypes = new HashSet<System.Type>
-		{
-			typeof(int),
-			typeof(float),
-			typeof(bool),
-			typeof(string),
-		};
-
 		public static bool BuildAPI(System.Action<string> errorMessageReceiver)
 		{
 			if (attemptedBuild)
@@ -435,11 +427,6 @@ namespace Pinion
 				InstructionData data = instructionLookUpTable[instructionCode];
 				return data.internalInstruction ? null : data;
 			}
-		}
-
-		public static bool IsSupportedPublicType(Type type)
-		{
-			return supportedTypes.Contains(type);
 		}
 	}
 }

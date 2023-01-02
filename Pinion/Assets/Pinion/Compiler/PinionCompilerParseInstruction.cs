@@ -82,7 +82,7 @@ namespace Pinion.Compiler
 					for (int i = 0; i < matchedInstruction.exposedParameterCount; i++)
 					{
 						System.Type argumentType = matchedInstruction.GetParameterType(i);
-						bestMatchArgumentsString += TypeNameShortHands.GetSimpleTypeName(argumentType);
+						bestMatchArgumentsString += PinionTypes.GetPinionNameFromType(argumentType);
 
 						if (i < matchedInstruction.exposedParameterCount - 1)
 							bestMatchArgumentsString += ", ";
@@ -93,7 +93,7 @@ namespace Pinion.Compiler
 
 					for (int i = 0; i < providedArguments.Count; i++)
 					{
-						providedArgumentsString += TypeNameShortHands.GetSimpleTypeName(providedArguments[i].argumentType);
+						providedArgumentsString += PinionTypes.GetPinionNameFromType(providedArguments[i].argumentType);
 
 						if (i < providedArguments.Count - 1)
 							providedArgumentsString += ", ";

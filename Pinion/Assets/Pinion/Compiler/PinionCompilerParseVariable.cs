@@ -63,6 +63,14 @@ namespace Pinion.Compiler
 				return;
 			}
 
+			Type variableType = PinionTypes.GetTypeFromPinionName(typeIdentifier);
+
+			if (variableType == null)
+			{
+				AddCompileError($"Invalid variable declaration. Unknown type: {typeIdentifier}. Variable declarion is structured: declare(type, $variableName, [default value]).");
+				return;
+			}
+
 			// Only used to store this external value "by name". Kept with two $$, just so the external code visually matches the script code.
 			// Otherwise treated identically.
 			string externalVariableName = null;
@@ -133,7 +141,7 @@ namespace Pinion.Compiler
 
 			ushort index = 0;
 
-			switch (typeIdentifier)
+			switch (typeIdentifier) // can't currently do a switch on types yet
 			{
 				case "int":
 					if (isArray)
@@ -155,7 +163,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}.");
+							AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(int))}.");
 							return;
 						}
 					}
@@ -167,7 +175,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}.");
+							AddCompileError($"Exceeded maximum number ({targetContainer.IntRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(int))}.");
 							return;
 						}
 					}
@@ -193,7 +201,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(float))}.");
+							AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(float))}.");
 							return;
 						}
 					}
@@ -205,7 +213,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(float))}.");
+							AddCompileError($"Exceeded maximum number ({targetContainer.FloatRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(float))}.");
 							return;
 						}
 					}
@@ -232,7 +240,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+							AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(bool))}.");
 							return;
 						}
 					}
@@ -244,7 +252,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(bool))}.");
+							AddCompileError($"Exceeded maximum number ({targetContainer.BoolRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(bool))}.");
 							return;
 						}
 					}
@@ -271,7 +279,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(string))}.");
+							AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(string))}.");
 							return;
 						}
 					}
@@ -284,7 +292,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {TypeNameShortHands.GetSimpleTypeName(typeof(string))}.");
+							AddCompileError($"Exceeded maximum number ({targetContainer.StringRegister.registerMax}) of items in memory (literal or variable) of type {PinionTypes.GetPinionNameFromType(typeof(string))}.");
 							return;
 						}
 					}
@@ -336,7 +344,7 @@ namespace Pinion.Compiler
 					}
 					else
 					{
-						AddCompileError(string.Format($"Cannot use {TypeNameShortHands.GetSimpleTypeName(indexerReturnValue.argumentType)} as array index. Array index must be of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}."));
+						AddCompileError(string.Format($"Cannot use {PinionTypes.GetPinionNameFromType(indexerReturnValue.argumentType)} as array index. Array index must be of type {PinionTypes.GetPinionNameFromType(typeof(int))}."));
 					}
 
 					return CompilerArgument.Invalid;
@@ -426,7 +434,7 @@ namespace Pinion.Compiler
 					}
 					else
 					{
-						AddCompileError(string.Format($"Cannot use {TypeNameShortHands.GetSimpleTypeName(indexerReturnValue.argumentType)} as array index. Array index must be of type {TypeNameShortHands.GetSimpleTypeName(typeof(int))}."));
+						AddCompileError(string.Format($"Cannot use {PinionTypes.GetPinionNameFromType(indexerReturnValue.argumentType)} as array index. Array index must be of type {PinionTypes.GetPinionNameFromType(typeof(int))}."));
 					}
 
 					return;
@@ -463,7 +471,7 @@ namespace Pinion.Compiler
 				}
 				else
 				{
-					AddCompileError(string.Format($"Cannot assign a value of type {TypeNameShortHands.GetSimpleTypeName(returnValue.argumentType)} to variable {variableToken}, of type {TypeNameShortHands.GetSimpleTypeName(expectedType)}."));
+					AddCompileError(string.Format($"Cannot assign a value of type {PinionTypes.GetPinionNameFromType(returnValue.argumentType)} to variable {variableToken}, of type {PinionTypes.GetPinionNameFromType(expectedType)}."));
 				}
 
 				return;
@@ -595,7 +603,7 @@ namespace Pinion.Compiler
 				}
 				else
 				{
-					AddCompileError($"Could not parse '{input}' as {TypeNameShortHands.GetSimpleTypeName(typeof(T))}. Array initializer can contain literal values only.");
+					AddCompileError($"Could not parse '{input}' as {PinionTypes.GetPinionNameFromType(typeof(T))}. Array initializer can contain literal values only.");
 				}
 			}
 		}
