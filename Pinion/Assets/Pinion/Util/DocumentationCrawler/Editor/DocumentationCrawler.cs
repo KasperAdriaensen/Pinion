@@ -241,11 +241,11 @@ namespace Pinion.Documentation
 		{
 			stringBuilder.Append(" ");
 
-			OperatorInfo operatorInfo = OperatorLookup.GetOperatorInfo(operatorString);
+			IOperatorInfo operatorInfo = OperatorLookup.GetOperatorInfo(operatorString);
 
 			operatorString = "\\" + operatorString; // \ for Markdown escape
 
-			int argumentCount = operatorInfo.argumentCount;
+			int argumentCount = operatorInfo.ArgumentCount;
 			int parameterCounter = 0;
 
 			stringBuilder.Append("operator ");

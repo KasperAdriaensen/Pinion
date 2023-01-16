@@ -206,32 +206,33 @@ namespace Pinion
 		{
 			// We do not check whether the passed instruction code is within the bounds of instructionLookupTable, because that would be wasted effort.
 			// If it is invalid - compilation did not do it's just job correctly.
-			InstructionData compileData = instructionLookUpTable[instructionCode];
+			InstructionData instructionData = instructionLookUpTable[instructionCode];
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 
 			string signature = string.Empty;
-			for (int i = 0; i < compileData.exposedParameterCount; i++)
+			for (int i = 0; i < instructionData.exposedParameterCount; i++)
 			{
-				signature += compileData.GetParameterType(i).ToString();
+				signature += instructionData.GetParameterType(i).ToString();
 
-				if (i < compileData.exposedParameterCount - 1)
+				if (i < instructionData.exposedParameterCount - 1)
 					signature += ",";
 			}
 
-			Debug.Log($"Calling: {compileData.instructionString}({signature}).");
+			Debug.Log($"Calling: {instructionData.instructionString}({signature}).");
 #endif
 
-			if (compileData.requiresContainer)
+			if (instructionData.requiresContainer)
 			{
 				instructionParametersReuse[0] = callingContainer.StackWrapper; // the container is never on the stack
 
 				// Arguments are on the stack in "reverse" order. First popped argument is the last one!
 				// start from compileData.parameterCount -> first index is (skipped index 0) + (compileData.parameterCount-1)
 				// iterate while i > 0 because index 0 is already filled in!
-				for (int i = compileData.exposedParameterCount; i > 0; i--)
+				for (int i = instructionData.exposedParameterCount; i > 0; i--)
 				{
 					instructionParametersReuse[i] = callingContainer.PopFromStack();
+					Debug.Log(instructionParametersReuse[i]);
 				}
 			}
 			else
@@ -239,16 +240,17 @@ namespace Pinion
 				// Arguments are on the stack in "reverse" order. First popped argument is the last one!
 				// start from compileData.parameterCount-1 -> for four arguments, start at index 3
 				// iterate while i >= 0
-				for (int i = compileData.exposedParameterCount - 1; i >= 0; i--)
+				for (int i = instructionData.exposedParameterCount - 1; i >= 0; i--)
 				{
 					instructionParametersReuse[i] = callingContainer.PopFromStack();
+					Debug.Log(instructionParametersReuse[i]);
 				}
 			}
 
 			// The system to create delegates requires us to work with an object[], not something something more flexible like List<object>.
 			// However, since the delegate creation logic also hardcodes the number of parameters to read, we don't need to worry about passing the correct number of arguments.
 			// Barring unforeseen bugs, it can only ever read the correct indices/amount. Indices beyond that are ignored.
-			compileData.Call(callingContainer, instructionParametersReuse);
+			instructionData.Call(callingContainer, instructionParametersReuse);
 		}
 
 		private static IEnumerable<Type> GetAllAPISources()

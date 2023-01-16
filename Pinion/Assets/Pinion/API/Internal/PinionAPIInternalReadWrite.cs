@@ -13,34 +13,30 @@ namespace Pinion
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadInt)]
-		public static void ReadValue_Int(PinionContainer container)
+		public static int ReadValue_Int(PinionContainer container)
 		{
-			int value = container.IntRegister.ReadValue(container.AdvanceToNextInstruction());
-			container.PushToStack(value);
+			return container.IntRegister.ReadValue(container.AdvanceToNextInstruction());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadFloat)]
-		public static void ReadValue_Float(PinionContainer container)
+		public static float ReadValue_Float(PinionContainer container)
 		{
-			float value = container.FloatRegister.ReadValue(container.AdvanceToNextInstruction());
-			container.PushToStack(value);
+			return container.FloatRegister.ReadValue(container.AdvanceToNextInstruction());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadBool)]
-		public static void ReadValue_Bool(PinionContainer container)
+		public static bool ReadValue_Bool(PinionContainer container)
 		{
-			bool value = container.BoolRegister.ReadValue(container.AdvanceToNextInstruction());
-			container.PushToStack(value);
+			return container.BoolRegister.ReadValue(container.AdvanceToNextInstruction());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadString)]
-		public static void ReadValue_String(PinionContainer container)
+		public static string ReadValue_String(PinionContainer container)
 		{
-			string value = container.StringRegister.ReadValue(container.AdvanceToNextInstruction());
-			container.PushToStack(value);
+			return container.StringRegister.ReadValue(container.AdvanceToNextInstruction());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
@@ -75,34 +71,30 @@ namespace Pinion
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadIntArray)]
-		public static void ReadValue_IntArray(PinionContainer container)
+		public static int ReadValue_IntArray(PinionContainer container)
 		{
-			int value = container.IntRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
-			container.PushToStack(value);
+			return container.IntRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadFloatArray)]
-		public static void ReadValue_FloatArray(PinionContainer container)
+		public static float ReadValue_FloatArray(PinionContainer container)
 		{
-			float value = container.FloatRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
-			container.PushToStack(value);
+			return container.FloatRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadBoolArray)]
-		public static void ReadValue_BoolArray(PinionContainer container)
+		public static bool ReadValue_BoolArray(PinionContainer container)
 		{
-			bool value = container.BoolRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
-			container.PushToStack(value);
+			return container.BoolRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.ReadStringArray)]
-		public static void ReadValue_StringArray(PinionContainer container)
+		public static string ReadValue_StringArray(PinionContainer container)
 		{
-			string value = container.StringRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
-			container.PushToStack(value);
+			return container.StringRegister.ReadValueFromArray(container, container.AdvanceToNextInstruction(), container.PopFromStack<int>());
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]

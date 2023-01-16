@@ -43,6 +43,8 @@ namespace Pinion.ContainerMemory
 
 			return methodInfo;
 		}
+
+		public abstract Type GetValueType();
 	}
 
 	public class StackValue<T> : StackValue
@@ -52,6 +54,11 @@ namespace Pinion.ContainerMemory
 		public StackValue(T value)
 		{
 			this.value = value;
+		}
+
+		public override Type GetValueType()
+		{
+			return typeof(T);
 		}
 
 		public T Read()

@@ -8,7 +8,6 @@ using Pinion.Compiler.Internal;
 
 namespace Pinion.Compiler
 {
-
 	public partial class PinionCompiler
 	{
 		private static string TokenSplitRegex = null; // built by BuildTokenSplitRegex
@@ -38,6 +37,40 @@ namespace Pinion.Compiler
 			{TokenType.Atomic, "literal/variable"}
 		};
 
+		private static IReadOnlyList<Token> ExpressionToTokenList(string expression)
+		{
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			string debugTokens = string.Empty;
+#endif
+			string[] splitExpression = Regex.Split(expression, TokenSplitRegex);
+			// Length will be <= splitExpression.Length.
+			// Some empty strings might get skipped but ballpark guess will be right.
+			List<Token> tokens = new List<Token>(splitExpression.Length);
+			int index = 0;
+
+			for (int i = 0; i < splitExpression.Length; i++)
+			{
+				string expressionPart = splitExpression[i];
+
+				// Repeated same split character eg. "))" will insert an empty value in array (artifact of splitting logic). Can safely be ignored.
+				if (string.IsNullOrEmpty(expressionPart))
+					continue;
+
+				tokens.Add(new Token(expressionPart, index));
+				index++;
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+				debugTokens += expressionPart + "   ";
+#endif
+			}
+
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+			Debug.Log(debugTokens);
+#endif
+
+			return tokens;
+		}
+
 		// For this parsing logic, see: shunting yard algorithm (with quite a few modifications)
 		// https://en.wikipedia.org/wiki/Shunting-yard_algorithm
 		private static CompilerArgument ParseExpression(PinionContainer container, string expression)
@@ -58,44 +91,30 @@ namespace Pinion.Compiler
 			// There's probably a (more efficient) way around this by treating indexers as a separate type of parenthesis that needs to be closed correctly.
 			// But currently that's overcomplicating matters.
 
-			Stack<string> operatorStack = new Stack<string>(64);    // typical operator stack as in shunting yard algoritm
+			Stack<Token> operatorStack = new Stack<Token>(64);    // typical operator stack as in shunting yard algoritm
 			Stack<CompilerArgument> argsStack = new Stack<CompilerArgument>(64); // stack of types for compile type checking (essentially like a runtime stack, only with types instead of actual values)
 			Stack<int> argsCountStack = new Stack<int>(64);     // stack used to track how many arguments a function or operator should consume within the current () scope
 			List<CompilerArgument> argsBuffer = new List<CompilerArgument>();            // recyclable list of arguments passed to functions to verify signature matches
 			bool interpretNextSubtractAsNegate = false;             // stupid edge case => indicates whether the next "-" is the binary subtract operator or the unary "negate" operator 
 
-			string[] expressionTokens = Regex.Split(expression, TokenSplitRegex);
-
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			string debugTokens = string.Empty;
-			foreach (string token in expressionTokens)
-			{
-				debugTokens += token + "   ";
-			}
-			Debug.Log(debugTokens);
-#endif
-
+			IReadOnlyList<Token> tokens = ExpressionToTokenList(expression);
 			List<ushort> output = container.scriptInstructions; // one way or another, we need to expose this, which is annoying... FIXME?
 
 			// Begin the first scope with 0 arguments.
 			argsCountStack.Push(0);
 
-			string previousToken = string.Empty;
-			string currentToken = string.Empty;
+			Token previousToken = Token.Invalid;
+			Token currentToken = Token.Invalid;
 			TokenType previousTokenType = TokenType.None;
 			HashSet<TokenType> expectedAfterPreviousToken = new HashSet<TokenType>();
 
-			for (int i = 0; i < expressionTokens.Length; i++)
+			for (int i = 0; i < tokens.Count; i++)
 			{
 				if (!compileSuccess) // If previous token broke everything, we can stop here.
 					break;
 
-				// Repeated same split character eg. "))" will insert an empty value in array (artifact of splitting logic). Can safely be ignored.
-				if (string.IsNullOrEmpty(expressionTokens[i]))
-					continue;
-
 				previousToken = currentToken;
-				currentToken = expressionTokens[i];
+				currentToken = tokens[i];
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 				Debug.Log($"[PinionCompiler] Parsing token: {currentToken}");
@@ -165,7 +184,7 @@ namespace Pinion.Compiler
 				{
 					previousTokenType = TokenType.ArgSeparator;
 					bool foundOpeningParenthesis = false;
-					string operatorOnStack = null;
+					Token operatorOnStack = Token.Invalid;
 
 					// Keep popping the operator stack until we encounter the opening parenthesis.
 					while (operatorStack.Count > 0 && !foundOpeningParenthesis)
@@ -210,9 +229,12 @@ namespace Pinion.Compiler
 					previousTokenType = TokenType.Operator;
 					// See comment next to interpretNextSubtractAsNegate declaration.
 					if (interpretNextSubtractAsNegate && currentToken == "-")
-						currentToken = "n";
+					{
+						//currentToken = "n";
+						currentToken = new Token("n", currentToken.index);
+					}
 
-					OperatorInfo currentTokenOperator = OperatorLookup.GetOperatorInfo(currentToken);
+					IOperatorInfo currentTokenOperator = OperatorLookup.GetOperatorInfo(currentToken);
 
 					while (ShouldResolveTopOfStackFirst(currentTokenOperator, operatorStack))
 					{
@@ -239,7 +261,7 @@ namespace Pinion.Compiler
 					previousTokenType = TokenType.ParenthesisClose;
 
 					bool foundMatchingParenthesis = false;
-					string poppedOperator = null;
+					Token poppedOperator = Token.Invalid;
 
 					// Keep popping the operator stack until we encounter the opening parenthesis.
 					while (operatorStack.Count > 0 && !foundMatchingParenthesis)
@@ -271,7 +293,7 @@ namespace Pinion.Compiler
 					// If there's something else left on the operator stack...
 					if (operatorStack.Count > 0)
 					{
-						string topOfStack = operatorStack.Peek();
+						Token topOfStack = operatorStack.Peek();
 
 						if (PinionAPI.IsInstructionString(topOfStack)) // ... and that something represents an instruction...
 						{
@@ -303,7 +325,7 @@ namespace Pinion.Compiler
 
 			while (operatorStack.Count > 0)
 			{
-				string operatorOnStack = operatorStack.Pop();
+				Token operatorOnStack = operatorStack.Pop();
 
 				// This catches the weird typo of having an unmatched OPENING parenthesis, e.g. If((Equals($a,$b))
 				// Is this correct, though? It's kind of baseless.
@@ -329,29 +351,33 @@ namespace Pinion.Compiler
 			if (argsStack.Count == 1)
 				return argsStack.Pop();
 			else
-				return new CompilerArgument(typeof(void), CompilerArgument.ArgSource.Complex);
+				return new CompilerArgument(typeof(void), CompilerArgument.ArgSource.Complex, Token.Invalid);
 		}
 
-		private static CompilerArgument ParseOperatorOrInstruction(PinionContainer container, string token, List<ushort> output, Stack<int> argumentCountStack, Stack<CompilerArgument> argumentStack, List<CompilerArgument> storeArgsBuffer)
+		private static CompilerArgument ParseOperatorOrInstruction(PinionContainer container, Token token, List<ushort> output, Stack<int> argumentCountStack, Stack<CompilerArgument> argumentStack, List<CompilerArgument> storeArgsBuffer)
 		{
 			int argCount = 0;
 
 			if (OperatorLookup.IsOperator(token)) // if operator - convert this function to associated instruction string
 			{
-				OperatorInfo operatorInfo = OperatorLookup.GetOperatorInfo(token);
-				token = operatorInfo.instructionString;
-				argCount = operatorInfo.argumentCount; // i.e. 2 = binary operator, 1 = unary operator 
+				IOperatorInfo operatorInfo = OperatorLookup.GetOperatorInfo(token);
+				argCount = operatorInfo.ArgumentCount; // i.e. 2 = binary operator, 1 = unary operator 
+				ConsumeArguments(argCount, argumentStack, argumentCountStack, storeArgsBuffer);
+				// Most operators just return a fixed string, but some (e.g. increment) need to 
+				// decide between different versions (e.g; prefix vs postfix increment) based on argument tokens.
+				string matchedInstructionString = operatorInfo.GetInstructionString(token, storeArgsBuffer);
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.Log($"[PinionCompiler] Converted operator \'{token}\' to instruction string \'{operatorInfo.instructionString}\'.");
+				Debug.Log($"[PinionCompiler] Converted operator \'{token}\' to instruction string \'{matchedInstructionString}\'.");
 #endif
+				// "Replace" token down the line.
+				token = new Token(matchedInstructionString, token.index);
 			}
 			else
 			{
 				argCount = argumentCountStack.Peek(); // i.e. ALL arguments within this scope
+				ConsumeArguments(argCount, argumentStack, argumentCountStack, storeArgsBuffer);
 			}
-
-			ConsumeArguments(argCount, argumentStack, argumentCountStack, storeArgsBuffer);
 
 			return ParseInstruction(container, token, output, storeArgsBuffer);
 		}
@@ -398,7 +424,7 @@ namespace Pinion.Compiler
 			return true;
 		}
 
-		private static bool ShouldResolveTopOfStackFirst(OperatorInfo currentToken, Stack<string> operatorStack)
+		private static bool ShouldResolveTopOfStackFirst(IOperatorInfo currentToken, Stack<Token> operatorStack)
 		{
 			// NOTE: We're using the terminology PRECEDENCE, literally: "going before something else".
 			// This means that the value should be interpreted "chronologically", i.e. the LOWEST value is the one that should be resolved FIRST.
@@ -407,12 +433,12 @@ namespace Pinion.Compiler
 			if (operatorStack.Count <= 0)
 				return false;
 
-			string topOfStackToken = operatorStack.Peek();
+			Token topOfStackToken = operatorStack.Peek();
 
-			if (topOfStackToken == ParenthesisOpen)
+			if (topOfStackToken.text == ParenthesisOpen)
 				return false;
 
-			OperatorInfo topOfStackOperator = OperatorLookup.GetOperatorInfo(topOfStackToken);
+			IOperatorInfo topOfStackOperator = OperatorLookup.GetOperatorInfo(topOfStackToken);
 
 			// I THOUGHT this was correct, but now it doesn't feel like it should be.
 			// Keeping it around for reference. I think it mostly comes down to the same thing.
@@ -423,14 +449,14 @@ namespace Pinion.Compiler
 			// 	return true;
 
 			// Previous operator has precedence? Resolve that one first.
-			if (topOfStackOperator.precedence < currentToken.precedence)
+			if (topOfStackOperator.Precedence < currentToken.Precedence)
 			{
 				return true;
 			}
 			// Previous operator has same precedence as the current one? Resolve it first if the current one "needs" the result.
-			else if (topOfStackOperator.precedence == currentToken.precedence)
+			else if (topOfStackOperator.Precedence == currentToken.Precedence)
 			{
-				if (currentToken.associativity == OperatorAssociativity.Left)
+				if (currentToken.Associativity == OperatorAssociativity.Left)
 					return true;
 			}
 

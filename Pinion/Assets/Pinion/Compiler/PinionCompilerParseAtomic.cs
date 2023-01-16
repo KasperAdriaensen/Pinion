@@ -8,12 +8,12 @@ namespace Pinion.Compiler
 {
 	public partial class PinionCompiler
 	{
-		private static CompilerArgument ParseAtomicValue(PinionContainer targetContainer, string token, List<ushort> output)
+		private static CompilerArgument ParseAtomicValue(PinionContainer targetContainer, Token token, List<ushort> output)
 		{
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.Log($"[PinionCompiler] Parsing atomic value: \'{token}\'");
 #endif
-			if (token.StartsWith(CompilerConstants.VariablePrefix)) // Expression is a variable identifier.
+			if (token.text.StartsWith(CompilerConstants.VariablePrefix)) // Expression is a variable identifier.
 				return ParseVariableRead(targetContainer, token, output);
 
 			// If no instruction keyword is involved and we are not dealing with a variable, we assume we are dealing with a literal and we do some extra processing.

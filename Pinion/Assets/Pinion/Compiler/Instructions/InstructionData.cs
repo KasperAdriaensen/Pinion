@@ -18,7 +18,7 @@ namespace Pinion.Compiler.Internal
 		public readonly int exposedParameterCount = 0;
 
 		private const BindingFlags customCompileHandlerBindingFlags = BindingFlags.DeclaredOnly | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-		public delegate void CustomCompileDelegate(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes);
+		public delegate void CustomCompileDelegate(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes, Action<string> compileErrorHandler);
 
 		private readonly Type[] parameterTypes = null;
 		private readonly InstructionInvoker invoker = null;
@@ -193,7 +193,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 			return true;
 		}
 
-		public bool RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes handlerType, IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes)
+		public bool RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes handlerType, IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes, Action<string> compileErrorHandler)
 		{
 			// By design this can and often will be true.
 			if (customCompileHandlers == null)
@@ -206,7 +206,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 				if (compileHandler.Item1 == handlerType)
 				{
 					foundAtleastOne = true;
-					compileHandler.Item2.Invoke(providedArguments, instructionCodes);
+					compileHandler.Item2.Invoke(providedArguments, instructionCodes, compileErrorHandler);
 				}
 			}
 

@@ -171,10 +171,16 @@ namespace Pinion
 			Debug.LogError(message);
 		}
 
-		public void PushToStack<T>(T value)
+		public void PushToStack(StackValue value)
 		{
-			stack.Push(new StackValue<T>(value));
+			stack.Push(value);
 		}
+
+		// kept around while experimenting while experiments with minimizing boxing are ongoing.
+		// public void PushToStack<T>(T value)
+		// {
+		// 	stack.Push(new StackValue<T>(value));
+		// }
 
 		// public void Push(int value)
 		// {

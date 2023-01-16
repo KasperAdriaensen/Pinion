@@ -46,6 +46,18 @@ namespace Pinion.Compiler.Internal
 
 		public StackValue Invoke(params StackValue[] args)
 		{
+			string argString = string.Empty;
+			foreach (StackValue v in args)
+			{
+				if (v == null)
+					break;
+
+				argString += $"{v.GetValueType().ToString()}, ";
+
+			}
+
+			Debug.Log(argString);
+
 			return wrapper(innerDelegate, args);
 		}
 

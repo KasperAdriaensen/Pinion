@@ -313,13 +313,15 @@ namespace Pinion.Compiler
 				ParseVariableWrite(targetContainer, variableName, valueExpression);
 		}
 
-		private static CompilerArgument ParseVariableRead(PinionContainer targetContainer, string variableToken, List<ushort> output)
+		private static CompilerArgument ParseVariableRead(PinionContainer targetContainer, Token token, List<ushort> output)
 		{
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			Debug.Log($"[PinionCompiler] Parsing variable read: \'{variableToken}\'");
+			Debug.Log($"[PinionCompiler] Parsing variable read: \'{token}\'");
 #endif
+			string variableString = token.text;
+
 			// Test: is array name followed by "[int]"?.
-			Match arrayIndexerMatch = Regex.Match(variableToken, CompilerRegex.arrayIndexerRegex);
+			Match arrayIndexerMatch = Regex.Match(variableString, CompilerRegex.arrayIndexerRegex);
 			bool accessingArray = false;
 			//	int arrayIndex = 0;
 
@@ -351,31 +353,31 @@ namespace Pinion.Compiler
 				}
 
 				accessingArray = true;
-				variableToken = variableToken.Substring(0, variableToken.Length - arrayIndexerMatch.Length); // remove indexer
+				variableString = variableString.Substring(0, variableString.Length - arrayIndexerMatch.Length); // remove indexer
 			}
 
 			// The process for declaring, defining and retrieving variables is largely the same as that for literals, with the exception that the same register index is used repeatedly,
 			// rather than a unique index per literal. For an in depth explanation of the process, look at literal parsing.
 
-			if (!IsValidVariableName(variableToken))
+			if (!IsValidVariableName(variableString))
 			{
-				AddCompileError($"Invalid variable name: {variableToken}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
+				AddCompileError($"Invalid variable name: {variableString}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
 				return CompilerArgument.Invalid;
 			}
 
-			if (!IsVariableDeclared(variableToken))
+			if (!IsVariableDeclared(variableString))
 			{
-				AddCompileError($"Undeclared variable: {variableToken}. A variable must be declared before it can be referenced.");
+				AddCompileError($"Undeclared variable: {variableString}. A variable must be declared before it can be referenced.");
 				return CompilerArgument.Invalid;
 			}
 
-			IVariablePointer pointer = variableNameToPointerMappings[variableToken];
+			IVariablePointer pointer = variableNameToPointerMappings[variableString];
 
 			if (accessingArray)
 			{
 				if (!pointer.IsArray)
 				{
-					AddCompileError($"Variable {variableToken} is not an array.");
+					AddCompileError($"Variable {variableString} is not an array.");
 					return CompilerArgument.Invalid;
 				}
 			}
@@ -384,10 +386,10 @@ namespace Pinion.Compiler
 			output.Add(pointer.GetIndexInRegister());
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			Debug.Log($"[PinionCompiler] Parsed variable read: variable {variableToken} of type {pointer.GetValueType().ToString()}.");
+			Debug.Log($"[PinionCompiler] Parsed variable read: variable {variableString} of type {pointer.GetValueType().ToString()}.");
 #endif
 
-			return new CompilerArgument(pointer);
+			return new CompilerArgument(pointer, token);
 		}
 
 		private static void ParseVariableAssign(PinionContainer targetContainer, string argumentsString)

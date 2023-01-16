@@ -14,22 +14,24 @@ namespace Pinion.Compiler.Internal
 		public readonly Type argumentType;
 		public readonly ArgSource argumentSource;
 		public readonly IVariablePointer variablePointer;
+		public readonly Token token;
 
-		public CompilerArgument(Type argumentType, ArgSource argumentSource)
+		public CompilerArgument(Type argumentType, ArgSource argumentSource, Token token)
 		{
 			this.argumentType = argumentType;
 			this.argumentSource = argumentSource;
 			this.variablePointer = null;
+			this.token = token;
 		}
 
-		public CompilerArgument(IVariablePointer variablePointer) : this(variablePointer.GetValueType(), ArgSource.Variable)
+		public CompilerArgument(IVariablePointer variablePointer, Token token) : this(variablePointer.GetValueType(), ArgSource.Variable, token)
 		{
 			this.variablePointer = variablePointer;
 		}
 
 		public static CompilerArgument Invalid
 		{
-			get { return new CompilerArgument(null, ArgSource.Literal); }
+			get { return new CompilerArgument(null, ArgSource.Literal, Token.Invalid); }
 		}
 
 		public bool Valid

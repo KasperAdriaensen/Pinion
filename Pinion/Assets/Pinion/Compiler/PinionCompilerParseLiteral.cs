@@ -11,7 +11,7 @@ namespace Pinion.Compiler
 {
 	public partial class PinionCompiler
 	{
-		private static CompilerArgument ParseLiteral(PinionContainer targetContainer, string literal, List<ushort> output)
+		private static CompilerArgument ParseLiteral(PinionContainer targetContainer, Token token, List<ushort> output)
 		{
 			// General process for a valid literal.
 			// Add a bytecode instruction indicating the next instruction code is to be interpreted as a literal. The associated function will know how to interpret that.
@@ -19,23 +19,25 @@ namespace Pinion.Compiler
 			// For bool, the next instruction is either 0 (false) or anything else (true).
 			// Finally, push a type to the compiler stack.
 
+			string literalString = token.text;
+
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			Debug.Log($"[PinionCompiler] Parsing literal read: \'{literal}\'");
+			Debug.Log($"[PinionCompiler] Parsing literal read: \'{literalString}\'");
 #endif
 
-			if (string.IsNullOrEmpty(literal)) // Not sure this would be currently possible, but it can't harm to check.
+			if (string.IsNullOrEmpty(literalString)) // Not sure this would be currently possible, but it can't harm to check.
 			{
 				AddCompileError("Literal value was empty!");
 				return CompilerArgument.Invalid;
 			}
 
-			if (ParseLiteralString(literal, out string resultString))
+			if (ParseLiteralString(literalString, out string resultString))
 			{
 				if (targetContainer.StringRegister.RegisterValue(resultString, out ushort index, true))
 				{
 					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadString).instructionCode);
 					output.Add(index);
-					return new CompilerArgument(typeof(string), CompilerArgument.ArgSource.Literal);
+					return new CompilerArgument(typeof(string), CompilerArgument.ArgSource.Literal, token);
 				}
 				else
 				{
@@ -43,13 +45,13 @@ namespace Pinion.Compiler
 					return CompilerArgument.Invalid;
 				}
 			}
-			else if (ParseLiteralBool(literal, out bool resultBool))
+			else if (ParseLiteralBool(literalString, out bool resultBool))
 			{
 				if (targetContainer.BoolRegister.RegisterValue(resultBool, out ushort index, true))
 				{
 					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadBool).instructionCode);
 					output.Add(index);
-					return new CompilerArgument(typeof(bool), CompilerArgument.ArgSource.Literal);
+					return new CompilerArgument(typeof(bool), CompilerArgument.ArgSource.Literal, token);
 				}
 				else
 				{
@@ -57,7 +59,7 @@ namespace Pinion.Compiler
 					return CompilerArgument.Invalid;
 				}
 			}
-			else if (ParseLiteralInt(literal, out int resultInt))
+			else if (ParseLiteralInt(literalString, out int resultInt))
 			{
 				// TODO: Possible optimization: we could store positive ints smaller than ushort.MaxValue directly in the instruction code.
 				// Then again, that would just raise complexity and would be less consistent.
@@ -66,7 +68,7 @@ namespace Pinion.Compiler
 				{
 					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadInt).instructionCode);
 					output.Add(index);
-					return new CompilerArgument(typeof(int), CompilerArgument.ArgSource.Literal);
+					return new CompilerArgument(typeof(int), CompilerArgument.ArgSource.Literal, token);
 				}
 				else
 				{
@@ -74,13 +76,13 @@ namespace Pinion.Compiler
 					return CompilerArgument.Invalid;
 				}
 			}
-			else if (ParseLiteralFloat(literal, out float resultFloat))
+			else if (ParseLiteralFloat(literalString, out float resultFloat))
 			{
 				if (targetContainer.FloatRegister.RegisterValue(resultFloat, out ushort index, true))
 				{
 					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ReadFloat).instructionCode);
 					output.Add(index);
-					return new CompilerArgument(typeof(float), CompilerArgument.ArgSource.Literal);
+					return new CompilerArgument(typeof(float), CompilerArgument.ArgSource.Literal, token);
 				}
 				else
 				{
@@ -91,9 +93,9 @@ namespace Pinion.Compiler
 			else
 			{
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.LogFormat($"Parsed literal as unrecognized: '{literal}'.");
+				Debug.LogFormat($"Parsed literal as unrecognized: '{literalString}'.");
 #endif
-				AddCompileError($"Unrecognized literal: {literal}");
+				AddCompileError($"Unrecognized literal: {literalString}");
 				return CompilerArgument.Invalid;
 			}
 		}

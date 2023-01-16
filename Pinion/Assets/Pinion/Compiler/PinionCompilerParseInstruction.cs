@@ -11,8 +11,10 @@ namespace Pinion.Compiler
 		private static List<InstructionData> instructionMatchBuffer = new List<InstructionData>(32); // reusable collection for string to instruction lookup results
 		private static Stack<System.Type> consumedArgumentsBuffer = new Stack<System.Type>(32); // reusable stack for arguments "consumed" by signature match checking
 
-		private static CompilerArgument ParseInstruction(PinionContainer targetContainer, string instructionString, List<ushort> output, IList<CompilerArgument> providedArguments)
+		private static CompilerArgument ParseInstruction(PinionContainer targetContainer, Token token, List<ushort> output, IList<CompilerArgument> providedArguments)
 		{
+			string instructionString = token.text;
+
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.Log($"[PinionCompiler] Parsing instruction: \'{instructionString}\'");
 #endif
@@ -118,19 +120,24 @@ namespace Pinion.Compiler
 				return CompilerArgument.Invalid;
 			}
 
-			bool ranFullCustomCompilation = matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.ReplaceInstruction, providedArguments, output);
+			bool ranFullCustomCompilation = matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.ReplaceInstruction, providedArguments, output, AddCompileError);
 
 			// "Regular" compilation. If ranFullCustomCompilation is true, compilation was entirely managed by custom-purpose logic. (Very advanced uses cases only.)
 			if (!ranFullCustomCompilation)
 			{
 				// Custom compilation logic before the instruction proper. In most cases this will not be used.
-				matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.BeforeInstruction, providedArguments, output);
+				matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.BeforeInstruction, providedArguments, output, AddCompileError);
 
 				// Adding instruction code he actual final instruction code list!
 				output.Add(matchedInstruction.instructionCode);
 
 				// Custom compilation logic after the instruction proper. In most cases this will not be used.
-				matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction, providedArguments, output);
+				matchedInstruction.RunCustomCompileHandlers(APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction, providedArguments, output, AddCompileError);
+			}
+
+			if (!compileSuccess) // Custom compile handlers could return compilation errors.
+			{
+				return CompilerArgument.Invalid;
 			}
 
 
@@ -139,7 +146,7 @@ namespace Pinion.Compiler
 			Debug.LogFormat($"[PinionCompiler] Parsed instruction {instructionString} to instruction {matchedInstruction.instructionCode}: {matchedInstruction.instructionString}.");
 #endif
 			providedArguments.Clear();
-			return new CompilerArgument(matchedInstruction.returnType, CompilerArgument.ArgSource.Complex);
+			return new CompilerArgument(matchedInstruction.returnType, CompilerArgument.ArgSource.Complex, token);
 		}
 	}
 }
