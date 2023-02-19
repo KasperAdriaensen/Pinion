@@ -9,6 +9,7 @@ namespace Pinion
 {
 	public partial class PinionContainer
 	{
+		#region Fields
 		// We don't define a "ran to completion" flag because what that  means exactly could depend a lot
 		// on the exact implementation. Better to implement it there, as needed and as fits the purpose.
 		public enum InternalState
@@ -20,66 +21,56 @@ namespace Pinion
 		}
 
 		public const int executionTimeoutMsDefault = 3000; // Could easily be made configurable in the future.
-		private int executionTimeoutMsCustom = -1;
-
 
 		public int ExecutionTimeoutMs
 		{
-			get
-			{
-				return executionTimeoutMsCustom > 0 ? executionTimeoutMsCustom : executionTimeoutMsDefault;
-			}
-			set
-			{
-				executionTimeoutMsCustom = value;
-			}
+			get { return executionTimeoutMsCustom > 0 ? executionTimeoutMsCustom : executionTimeoutMsDefault; }
+			set { executionTimeoutMsCustom = value; }
 		}
 
-		// TODO This should probably not be editable.
-		public List<ushort> scriptInstructions = new List<ushort>();
-		public InternalState StateFlags { get { return stateFlags; } }
 		public int CurrentInstructionIndex
 		{
 			get { return currentInstructionIndex; }
-			// do not clamp here - under certain conditions settings this to -1 can be desirable (e.g. execute command index 0 as next command)
+			// do not clamp here - under certain conditions settings this to -1 can be desirable 
+			// (e.g. execute command index 0 as next command)
 			// a number >= scriptInstructions.Length will just terminate the execution loop
 			private set { currentInstructionIndex = value; }
 		}
 
+		public InternalState StateFlags
+		{
+			get { return stateFlags; }
+		}
+
+		public int mainBlockStartIndex = 0; // TODO Don't like this being a public value. It should not be altered outside of compilation.
+		public List<ushort> scriptInstructions = new List<ushort>();    // TODO This should probably not be editable.
 		public ContainerMemoryRegister<int> IntRegister { get { return intRegister; } }
 		public ContainerMemoryRegister<float> FloatRegister { get { return floatRegister; } }
 		public ContainerMemoryRegister<string> StringRegister { get { return stringRegister; } }
 		public ContainerMemoryRegister<bool> BoolRegister { get { return boolRegister; } }
 		public ContainerMemoryRegister<int> LabelRegister { get { return labelRegister; } }
-		public StackValue<PinionContainer> StackWrapper { get; private set; }
-		public int mainBlockStartIndex = 0; // TODO Don't like this being a public value. It should not be altered outside of compilation.
 
-		protected int resumeIndex = -1;
 		protected System.Action<LogType, string> logHandler = null;
 		protected System.ValueTuple<string, object>[] externalVariables = null;
+		protected int resumeIndex = -1;
 
 		private const int stackInitSize = 16;
 		private const int jumpLocationStackInitSize = 32;
-
 		private ContainerMemoryRegister<int> intRegister = new ContainerMemoryRegister<int>(64);
 		private ContainerMemoryRegister<float> floatRegister = new ContainerMemoryRegister<float>(64);
 		private ContainerMemoryRegister<string> stringRegister = new ContainerMemoryRegister<string>(64);
 		private ContainerMemoryRegister<bool> boolRegister = new ContainerMemoryRegister<bool>(32);
 		private ContainerMemoryRegister<int> labelRegister = new ContainerMemoryRegister<int>(127);
-
 		private Stack<StackValue> stack = new Stack<StackValue>(stackInitSize);
-
 		private Stack<int> jumpLocationStack = new Stack<int>(jumpLocationStackInitSize);
 		private int currentInstructionIndex = 0;
 		private Stopwatch executeStopwatch = new Stopwatch();
 		private InternalState stateFlags = InternalState.None;
 		private bool forceStop = false;
-
-		public PinionContainer()
-		{
-			StackWrapper = new StackValue<PinionContainer>(this);
-		}
-
+		private Dictionary<System.Type, StackValue> stackWrappers = new Dictionary<System.Type, StackValue>(4);
+		private int executionTimeoutMsCustom = -1;
+		#endregion
+		#region Run
 		public virtual void Run(System.Action<LogType, string> logHandler = null, params System.ValueTuple<string, object>[] externalVariables)
 		{
 			this.logHandler = logHandler;
@@ -141,36 +132,22 @@ namespace Pinion
 				RemoveStateFlag(InternalState.Executing);
 		}
 
-		public void Log(string message)
+		public bool HasStateFlag(InternalState state)
 		{
-			if (logHandler != null)
-			{
-				logHandler(LogType.Log, message);
-			}
-
-			Debug.Log(message);
+			return (stateFlags & state) == state;
 		}
 
-		public void LogWarning(string message)
+		protected void SetStateFlag(InternalState state)
 		{
-			if (logHandler != null)
-			{
-				logHandler(LogType.Warning, message);
-			}
-
-			Debug.LogWarning(message);
+			stateFlags |= state;
 		}
 
-		public void LogError(string message)
+		protected void RemoveStateFlag(InternalState state)
 		{
-			if (logHandler != null)
-			{
-				logHandler(LogType.Error, message);
-			}
-
-			Debug.LogError(message);
+			stateFlags &= ~state;
 		}
-
+		#endregion
+		#region Stack
 		public void PushToStack(StackValue value)
 		{
 			stack.Push(value);
@@ -221,7 +198,8 @@ namespace Pinion
 		{
 			return stack.Pop();
 		}
-
+		#endregion
+		#region Flow
 		private ushort GetInstructionCodeAtIndex(int index)
 		{
 			if (index < 0 || index >= scriptInstructions.Count)
@@ -270,7 +248,8 @@ namespace Pinion
 		{
 			return jumpLocationStack.Pop();
 		}
-
+		#endregion
+		#region ExecutionControl
 		public virtual void Stop()
 		{
 			forceStop = true;
@@ -286,14 +265,13 @@ namespace Pinion
 
 		protected virtual void OnSleep()
 		{
-
 		}
 
 		protected virtual void OnSleepResume()
 		{
-
 		}
-
+		#endregion
+		#region Blocks
 		public void OnInitBegin()
 		{
 		}
@@ -314,20 +292,56 @@ namespace Pinion
 		{
 
 		}
-
-		public bool HasStateFlag(InternalState state)
+		#endregion
+		#region Logging
+		public void Log(string message)
 		{
-			return (stateFlags & state) == state;
+			if (logHandler != null)
+			{
+				logHandler(LogType.Log, message);
+			}
+
+			Debug.Log(message);
 		}
 
-		protected void SetStateFlag(InternalState state)
+		public void LogWarning(string message)
 		{
-			stateFlags |= state;
+			if (logHandler != null)
+			{
+				logHandler(LogType.Warning, message);
+			}
+
+			Debug.LogWarning(message);
 		}
 
-		protected void RemoveStateFlag(InternalState state)
+		public void LogError(string message)
 		{
-			stateFlags &= ~state;
+			if (logHandler != null)
+			{
+				logHandler(LogType.Error, message);
+			}
+
+			Debug.LogError(message);
 		}
+		#endregion
+		#region StackWrappers
+		public StackValue GetStackWrapperAs(System.Type containerType)
+		{
+			return stackWrappers[containerType];
+		}
+
+		public void GenerateStackWrappers()
+		{
+			stackWrappers.Clear();
+			System.Type currentType = this.GetType();
+
+			while (currentType != null && typeof(PinionContainer).IsAssignableFrom(currentType))
+			{
+				StackValue stackWrapper = StackValue.GetContainerWrapper(currentType, this);
+				stackWrappers.Add(currentType, stackWrapper);
+				currentType = currentType.BaseType;
+			}
+		}
+		#endregion
 	}
 }

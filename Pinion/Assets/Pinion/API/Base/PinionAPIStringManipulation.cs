@@ -65,6 +65,13 @@ namespace Pinion
 			return value.ToUpper();
 		}
 
+		/// Returns an empty string.
+		[APIMethod]
+		public static string EmptyString()
+		{
+			return string.Empty;
+		}
+
 		/// Tries to interpret string $0 as an int. If $0 is improperly formatted to allow this, returns $1 instead. See CanConvertToInt.
 		[APIMethod]
 		public static int ToInt(string value, int failValue)

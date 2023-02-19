@@ -1,5 +1,6 @@
 declare (int, $iterations, 0)
 
 while ($iterations < 10000)
-	set($iterations, Increment($iterations))
+	//set($iterations, $iterations + 1) // av 186ms
+	$iterations++ // av 153ms
 endwhile

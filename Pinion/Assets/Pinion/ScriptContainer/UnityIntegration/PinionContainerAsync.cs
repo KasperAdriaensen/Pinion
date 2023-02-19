@@ -33,6 +33,16 @@ namespace Pinion.Unity
 		{
 			base.OnSleep();
 
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+			{
+				Debug.LogWarning("Can only use regular Sleep() instruction at edit time. Script will simply continue instead. This may have unintended consequences.");
+				waitConditions.Clear();
+				SleepContinueHandler();
+				return;
+			}
+#endif
+
 			// Passing a wrapper function, so we can (un)subscribe it as a unique item, instead of accidentally (un)subscribing RunInternal.
 			UnityEventCaller.BindUpdate(SleepContinueHandler);
 		}
@@ -62,6 +72,10 @@ namespace Pinion.Unity
 		{
 			base.OnSleepResume();
 
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+				return;
+#endif
 			// Passing a wrapper function, so we can (un)subscribe it as a unique item, instead of accidentally (un)subscribing RunInternal.
 			UnityEventCaller.UnbindUpdate(SleepContinueHandler);
 		}

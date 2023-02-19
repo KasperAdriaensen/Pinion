@@ -40,7 +40,7 @@ namespace Pinion.Compiler
 		private static IReadOnlyList<Token> ExpressionToTokenList(string expression)
 		{
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-			string debugTokens = string.Empty;
+			string debugTokens = "Expression tokens: ";
 #endif
 			string[] splitExpression = Regex.Split(expression, TokenSplitRegex);
 			// Length will be <= splitExpression.Length.
@@ -60,7 +60,7 @@ namespace Pinion.Compiler
 				index++;
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				debugTokens += expressionPart + "   ";
+				debugTokens += expressionPart + "	";
 #endif
 			}
 
@@ -95,7 +95,7 @@ namespace Pinion.Compiler
 			Stack<CompilerArgument> argsStack = new Stack<CompilerArgument>(64); // stack of types for compile type checking (essentially like a runtime stack, only with types instead of actual values)
 			Stack<int> argsCountStack = new Stack<int>(64);     // stack used to track how many arguments a function or operator should consume within the current () scope
 			List<CompilerArgument> argsBuffer = new List<CompilerArgument>();            // recyclable list of arguments passed to functions to verify signature matches
-			bool interpretNextSubtractAsNegate = false;             // stupid edge case => indicates whether the next "-" is the binary subtract operator or the unary "negate" operator 
+																						 //bool interpretNextSubtractAsNegate = false;             // stupid edge case => indicates whether the next "-" is the binary subtract operator or the unary "negate" operator 
 
 			IReadOnlyList<Token> tokens = ExpressionToTokenList(expression);
 			List<ushort> output = container.scriptInstructions; // one way or another, we need to expose this, which is annoying... FIXME?
@@ -198,7 +198,7 @@ namespace Pinion.Compiler
 						else
 						{
 							operatorOnStack = operatorStack.Pop();
-							if (!Returns(ParseOperatorOrInstruction(container, operatorOnStack, output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
+							if (!Returns(ParseOperatorOrInstruction(container, operatorOnStack, output, argsCountStack, argsStack, argsBuffer, tokens), argsCountStack, argsStack))
 								break;
 						}
 					}
@@ -212,7 +212,7 @@ namespace Pinion.Compiler
 						break;
 					}
 
-					interpretNextSubtractAsNegate = true;
+					//interpretNextSubtractAsNegate = true;
 					continue;
 				}
 
@@ -220,7 +220,7 @@ namespace Pinion.Compiler
 				{
 					previousTokenType = TokenType.Instruction;
 					operatorStack.Push(currentToken);
-					interpretNextSubtractAsNegate = false;
+					//	interpretNextSubtractAsNegate = false;
 					continue;
 				}
 
@@ -228,22 +228,20 @@ namespace Pinion.Compiler
 				{
 					previousTokenType = TokenType.Operator;
 					// See comment next to interpretNextSubtractAsNegate declaration.
-					if (interpretNextSubtractAsNegate && currentToken == "-")
-					{
-						//currentToken = "n";
-						currentToken = new Token("n", currentToken.index);
-					}
+					// if (interpretNextSubtractAsNegate && currentToken == "-")
+					// {
+					// 	//currentToken = "n";
+					// 	currentToken = new Token("n", currentToken.index);
+					// }
 
-					IOperatorInfo currentTokenOperator = OperatorLookup.GetOperatorInfo(currentToken);
-
-					while (ShouldResolveTopOfStackFirst(currentTokenOperator, operatorStack))
+					while (ShouldResolveTopOfStackFirst(currentToken, operatorStack, tokens))
 					{
-						if (!Returns(ParseOperatorOrInstruction(container, operatorStack.Pop(), output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
+						if (!Returns(ParseOperatorOrInstruction(container, operatorStack.Pop(), output, argsCountStack, argsStack, argsBuffer, tokens), argsCountStack, argsStack))
 							break;
 					}
 
 					operatorStack.Push(currentToken);
-					interpretNextSubtractAsNegate = true;
+					//	interpretNextSubtractAsNegate = true;
 					continue;
 				}
 
@@ -252,7 +250,7 @@ namespace Pinion.Compiler
 					previousTokenType = TokenType.ParenthesisOpen;
 					operatorStack.Push(currentToken);
 					argsCountStack.Push(0);
-					interpretNextSubtractAsNegate = true;
+					//	interpretNextSubtractAsNegate = true;
 					continue;
 				}
 
@@ -274,7 +272,7 @@ namespace Pinion.Compiler
 						}
 						else
 						{
-							if (!Returns(ParseOperatorOrInstruction(container, poppedOperator, output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
+							if (!Returns(ParseOperatorOrInstruction(container, poppedOperator, output, argsCountStack, argsStack, argsBuffer, tokens), argsCountStack, argsStack))
 								break;
 						}
 					}
@@ -297,7 +295,7 @@ namespace Pinion.Compiler
 
 						if (PinionAPI.IsInstructionString(topOfStack)) // ... and that something represents an instruction...
 						{
-							if (!Returns(ParseOperatorOrInstruction(container, operatorStack.Pop(), output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
+							if (!Returns(ParseOperatorOrInstruction(container, operatorStack.Pop(), output, argsCountStack, argsStack, argsBuffer, tokens), argsCountStack, argsStack))
 								break;
 						}
 					}
@@ -305,14 +303,14 @@ namespace Pinion.Compiler
 					int resultingArgCount = argsCountStack.Pop();
 					AlterScopeArgCount(resultingArgCount, argsCountStack);
 
-					interpretNextSubtractAsNegate = false;
+					//	interpretNextSubtractAsNegate = false;
 					continue;
 				}
 
 				if (Returns(ParseAtomicValue(container, currentToken, output), argsCountStack, argsStack))
 				{
 					previousTokenType = TokenType.Atomic;
-					interpretNextSubtractAsNegate = false;
+					//	interpretNextSubtractAsNegate = false;
 				}
 				else
 				{
@@ -335,7 +333,7 @@ namespace Pinion.Compiler
 					break;
 				}
 
-				if (!Returns(ParseOperatorOrInstruction(container, operatorOnStack, output, argsCountStack, argsStack, argsBuffer), argsCountStack, argsStack))
+				if (!Returns(ParseOperatorOrInstruction(container, operatorOnStack, output, argsCountStack, argsStack, argsBuffer, tokens), argsCountStack, argsStack))
 					break;
 			}
 
@@ -354,18 +352,26 @@ namespace Pinion.Compiler
 				return new CompilerArgument(typeof(void), CompilerArgument.ArgSource.Complex, Token.Invalid);
 		}
 
-		private static CompilerArgument ParseOperatorOrInstruction(PinionContainer container, Token token, List<ushort> output, Stack<int> argumentCountStack, Stack<CompilerArgument> argumentStack, List<CompilerArgument> storeArgsBuffer)
+		private static CompilerArgument ParseOperatorOrInstruction(
+			PinionContainer container,
+			Token token,
+			List<ushort> output,
+			Stack<int> argumentCountStack,
+			Stack<CompilerArgument> argumentStack,
+			List<CompilerArgument> storeArgsBuffer,
+			IReadOnlyList<Token> expressionTokens
+			)
 		{
 			int argCount = 0;
 
-			if (OperatorLookup.IsOperator(token)) // if operator - convert this function to associated instruction string
+			if (OperatorLookup.IsOperator(token)) // if operator - convert this operator to its associated instruction string
 			{
 				IOperatorInfo operatorInfo = OperatorLookup.GetOperatorInfo(token);
-				argCount = operatorInfo.ArgumentCount; // i.e. 2 = binary operator, 1 = unary operator 
+				argCount = operatorInfo.GetArgumentCount(token, expressionTokens); // i.e. 2 = binary operator, 1 = unary operator 
 				ConsumeArguments(argCount, argumentStack, argumentCountStack, storeArgsBuffer);
 				// Most operators just return a fixed string, but some (e.g. increment) need to 
 				// decide between different versions (e.g; prefix vs postfix increment) based on argument tokens.
-				string matchedInstructionString = operatorInfo.GetInstructionString(token, storeArgsBuffer);
+				string matchedInstructionString = operatorInfo.GetInstructionString(token, expressionTokens, storeArgsBuffer);
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 				Debug.Log($"[PinionCompiler] Converted operator \'{token}\' to instruction string \'{matchedInstructionString}\'.");
@@ -424,7 +430,7 @@ namespace Pinion.Compiler
 			return true;
 		}
 
-		private static bool ShouldResolveTopOfStackFirst(IOperatorInfo currentToken, Stack<Token> operatorStack)
+		private static bool ShouldResolveTopOfStackFirst(Token currentToken, Stack<Token> operatorStack, IReadOnlyList<Token> expressionTokens)
 		{
 			// NOTE: We're using the terminology PRECEDENCE, literally: "going before something else".
 			// This means that the value should be interpreted "chronologically", i.e. the LOWEST value is the one that should be resolved FIRST.
@@ -438,6 +444,7 @@ namespace Pinion.Compiler
 			if (topOfStackToken.text == ParenthesisOpen)
 				return false;
 
+			IOperatorInfo currentOperator = OperatorLookup.GetOperatorInfo(currentToken);
 			IOperatorInfo topOfStackOperator = OperatorLookup.GetOperatorInfo(topOfStackToken);
 
 			// I THOUGHT this was correct, but now it doesn't feel like it should be.
@@ -448,15 +455,17 @@ namespace Pinion.Compiler
 			// if (currentToken.associativity == OperatorAssociativity.Right && currentToken.precedence < topOfStackPrecedence)
 			// 	return true;
 
+			ushort topOfStackPrecedence = topOfStackOperator.GetPrecedence(topOfStackToken, expressionTokens);
+			ushort currentPrecedence = currentOperator.GetPrecedence(currentToken, expressionTokens);
 			// Previous operator has precedence? Resolve that one first.
-			if (topOfStackOperator.Precedence < currentToken.Precedence)
+			if (topOfStackPrecedence < currentPrecedence)
 			{
 				return true;
 			}
 			// Previous operator has same precedence as the current one? Resolve it first if the current one "needs" the result.
-			else if (topOfStackOperator.Precedence == currentToken.Precedence)
+			else if (topOfStackPrecedence == currentPrecedence)
 			{
-				if (currentToken.Associativity == OperatorAssociativity.Left)
+				if (currentOperator.GetAssociativity(currentToken, expressionTokens) == OperatorAssociativity.Left)
 					return true;
 			}
 

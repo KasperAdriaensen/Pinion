@@ -63,14 +63,6 @@ namespace Pinion.Compiler
 				return;
 			}
 
-			Type variableType = PinionTypes.GetTypeFromPinionName(typeIdentifier);
-
-			if (variableType == null)
-			{
-				AddCompileError($"Invalid variable declaration. Unknown type: {typeIdentifier}. Variable declarion is structured: declare(type, $variableName, [default value]).");
-				return;
-			}
-
 			// Only used to store this external value "by name". Kept with two $$, just so the external code visually matches the script code.
 			// Otherwise treated identically.
 			string externalVariableName = null;
@@ -137,6 +129,15 @@ namespace Pinion.Compiler
 					AddCompileError("Could not interpret third argument for array declaration. Must be either an array size (e.g. 'set(string[], $myArray, 2)') or an initializer (e.g. 'set(string[], $myArray, {\"hello\", \"world\"})').");
 					return;
 				}
+			}
+
+			// Don't do this earlier. We want to remove the array indexer first, if present.
+			Type variableType = PinionTypes.GetTypeFromPinionName(typeIdentifier);
+
+			if (variableType == null)
+			{
+				AddCompileError($"Invalid variable declaration. Unknown type: {typeIdentifier}. Variable declarion is structured: declare(type, $variableName, [default value]).");
+				return;
 			}
 
 			ushort index = 0;

@@ -5,6 +5,8 @@ using UnityEditor;
 using Pinion;
 using Pinion.Compiler;
 using System.Linq;
+using System;
+using System.Reflection;
 
 public class PinionQuickTest : EditorWindow
 {
@@ -18,6 +20,14 @@ public class PinionQuickTest : EditorWindow
 	private long compileTime = -1;
 	private long executeTime = -1;
 	private bool compilationIncludedAPIBuild = false;
+	private TextAsset scriptTextAsset = null;
+	private string stringToCompile = null;
+
+	private int selectedContainerType = 0;
+	// These two have to be kept in sync. Not great design, but EditorGUILayout.Popup
+	// complicates things to much to do it any other way.
+	private List<Type> containerTypes = new List<Type>();
+	private string[] containerTypeNames = null;
 
 	[MenuItem("Window/Pinion/Pinion Quick Test")]
 	private static void ShowWindow()
@@ -27,9 +37,36 @@ public class PinionQuickTest : EditorWindow
 		window.Show();
 	}
 
+	private void OnEnable()
+	{
+		containerTypeNames = StoreContainerTypes(containerTypes);
+	}
+
 	private void OnGUI()
 	{
-		textInput = EditorGUILayout.TextArea(textInput, GUILayout.MinHeight(300));
+		selectedContainerType = EditorGUILayout.Popup(selectedContainerType, containerTypeNames);
+
+		GUILayout.Label("Enter Pinion code or TextAsset.");
+		GUILayout.BeginHorizontal();
+		scriptTextAsset = (TextAsset)EditorGUILayout.ObjectField(scriptTextAsset, typeof(TextAsset), false);
+		if (scriptTextAsset && GUILayout.Button("Clear", GUILayout.Width(50)))
+		{
+			scriptTextAsset = null;
+		}
+		GUILayout.EndHorizontal();
+
+		if (scriptTextAsset != null)
+		{
+			GUI.enabled = false;
+			EditorGUILayout.TextArea(scriptTextAsset.text, GUILayout.MinHeight(300));
+			stringToCompile = scriptTextAsset.text;
+			GUI.enabled = true;
+		}
+		else
+		{
+			textInput = EditorGUILayout.TextArea(textInput, GUILayout.MinHeight(300));
+			stringToCompile = textInput;
+		}
 
 		GUILayout.Space(20f);
 		GUILayout.BeginHorizontal();
@@ -41,14 +78,21 @@ public class PinionQuickTest : EditorWindow
 		GUILayout.EndHorizontal();
 
 		timeCompilation = GUILayout.Toggle(timeCompilation, "Time compilation");
-		timeExecution = GUILayout.Toggle(timeExecution, "Time execution");
-
 #if PINION_COMPILE_DEBUG
-		if (timeCompilation || timeExecution)
+		if (timeCompilation)
 		{
-			EditorGUILayout.HelpBox("The debugging symbol is currently defined. There will be significant overhead from logging and generating output. Timing results will not be indicative.", MessageType.Warning);
+			EditorGUILayout.HelpBox("The compilation debugging symbol is currently defined. There will be significant overhead from logging and generating output. Timing results will not be indicative.", MessageType.Warning);
 		}
 #endif
+		timeExecution = GUILayout.Toggle(timeExecution, "Time execution");
+#if PINION_RUNTIME_DEBUG
+		if (timeExecution)
+		{
+			EditorGUILayout.HelpBox("The runtime debugging symbol is currently defined. There will be significant overhead from logging and generating output. Timing results will not be indicative.", MessageType.Warning);
+		}
+#endif
+
+
 		GUILayout.BeginVertical(EditorStyles.helpBox);
 		GUILayout.BeginHorizontal();
 		if (timeCompilation && compileTime >= 0)
@@ -68,12 +112,21 @@ public class PinionQuickTest : EditorWindow
 
 		if (timeCompilation && compilationIncludedAPIBuild)
 		{
-			EditorGUILayout.HelpBox($"Compilation time included API building. This is called the first time any Pinion container is compiled during the session, but can also be called at an earlier time for optimization purposes.", MessageType.Info);
+			EditorGUILayout.HelpBox($"Compilation time included API building. This happens the first time any Pinion container is compiled during a session (play mode) or after a recompile (edit mode). In play mode, it can also be called at a time of your choosing. Compile again or press Build API to prevent this.", MessageType.Info);
 		}
 
 		GUILayout.EndVertical();
 
+
 		GUILayout.Space(20f);
+
+		GUI.enabled = !PinionAPI.BuiltSuccessfully;
+		if (GUILayout.Button("Build API"))
+		{
+			PinionAPI.BuildAPI(Debug.Log);
+		}
+		GUI.enabled = true;
+
 
 		if (GUILayout.Button("Compile"))
 		{
@@ -100,12 +153,14 @@ public class PinionQuickTest : EditorWindow
 		executeTime = -1; // also want to reset if we're only compiling
 
 		// Keep track of whether compilation also included api building.
+		// If it hasn't happened yet, it will take place now.
 		compilationIncludedAPIBuild = !PinionAPI.BuiltSuccessfully;
 
 		stopwatch.Reset();
 		stopwatch.Start();
 
-		compileResult = PinionCompiler.Compile(textInput, CompileErrorHandler);
+		//compileResult = PinionCompiler.Compile(stringToCompile, CompileErrorHandler);
+		compileResult = PinionCompiler.Compile(containerTypes[selectedContainerType], stringToCompile, HandleCompileError);
 
 		stopwatch.Stop();
 		if (timeCompilation)
@@ -128,7 +183,16 @@ public class PinionQuickTest : EditorWindow
 			stopwatch.Reset();
 			stopwatch.Start();
 
-			compileResult.Run(null);
+			try
+			{
+				compileResult.Run(HandleMessage);
+			}
+			catch
+			{
+				string message = $"Unhandled exception during execution. Check console.";
+				HandleMessage(LogType.Exception, message);
+				throw;
+			}
 
 			stopwatch.Stop();
 			if (timeExecution)
@@ -136,9 +200,48 @@ public class PinionQuickTest : EditorWindow
 		}
 	}
 
-	private void CompileErrorHandler(string message)
+	private void HandleCompileError(string message)
 	{
-		messages.Add((MessageType.Error, message));
+		HandleMessage(LogType.Error, message);
+	}
+
+	private void HandleMessage(LogType logtype, string message)
+	{
+		MessageType messageType = MessageType.None;
+		switch (logtype)
+		{
+			case LogType.Log:
+				messageType = MessageType.Info;
+				break;
+			case LogType.Warning:
+				messageType = MessageType.Warning;
+				break;
+			default:
+				messageType = MessageType.Error;
+				break;
+		}
+
+		messages.Add((messageType, message));
+	}
+
+	private string[] StoreContainerTypes(List<Type> returnTypes)
+	{
+		if (returnTypes == null)
+			throw new ArgumentNullException(nameof(returnTypes));
+
+		returnTypes.Clear();
+
+		Type parentType = typeof(PinionContainer);
+		returnTypes.Add(parentType);
+
+		foreach (Type type in
+			Assembly.GetAssembly(parentType).GetTypes()
+			.Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(parentType)))
+		{
+			returnTypes.Add(type);
+		}
+
+		return returnTypes.Select(t => t.Name).ToArray();
 	}
 
 	// No need to assign this again because the container's Log/LogWarning/LogError already calls the Unity logger too.

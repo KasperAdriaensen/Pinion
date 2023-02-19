@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Pinion.Utility;
 using System.IO;
+using Pinion.ContainerMemory;
 
 namespace Pinion.Unity
 {
@@ -34,10 +35,9 @@ namespace Pinion.Unity
 		private ExecuteScheduling executeScheduling = ExecuteScheduling.InstantOnce;
 		private ExecuteLoop executeLoop = ExecuteLoop.DontLoop;
 		private float loopInterval = 2;
-		private float sleepResumeTime = 0;
+		private float sleepResumeTime = -1;
 		private float lastExecuteTime = float.NegativeInfinity;       // any timestamp should be > than this value, so first iteration will always run
 		private float lastExecuteTimeFixed = float.NegativeInfinity;  // any timestamp should be > than this value, so first iteration will always run
-
 
 		public override void Run(System.Action<LogType, string> logHandler = null, params System.ValueTuple<string, object>[] externalVariables)
 		{
@@ -230,13 +230,31 @@ namespace Pinion.Unity
 		{
 			base.OnSleep();
 
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+			{
+				Debug.LogWarning("Can only use regular Sleep() instruction at edit time. Script will simply continue instead. This may have unintended consequences.");
+				SleepContinueHandler();
+				return;
+			}
+#endif
+
 			// Passing a wrapper function, so we can (un)subscribe it as a unique item, instead of accidentally (un)subscribing RunInternal.
 			UnityEventCaller.BindUpdate(SleepContinueHandler);
 		}
 
 		private void SleepContinueHandler()
 		{
-			if (Time.time >= sleepResumeTime)
+
+			// Time.time is weird in editor. Let's just always have succeed it immediately.
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+			{
+				RunInternal();
+				return;
+			}
+#endif
+			if (Time.time >= sleepResumeTime) // If called without a time variable, this means next frame.
 				RunInternal();
 		}
 
@@ -246,6 +264,10 @@ namespace Pinion.Unity
 		{
 			base.OnSleepResume();
 
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+				return;
+#endif
 			// Passing a wrapper function, so we can (un)subscribe it as a unique item, instead of accidentally (un)subscribing RunInternal.
 			UnityEventCaller.UnbindUpdate(SleepContinueHandler);
 		}

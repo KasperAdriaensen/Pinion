@@ -17,13 +17,13 @@ namespace Pinion.Compiler.Internal
 			{"*", new OperatorInfo("Multiply", 3, OperatorAssociativity.Left, 2)},
 			{"/", new OperatorInfo("Divide", 3, OperatorAssociativity.Left, 2)},
 			{"%", new OperatorInfo("Modulo", 3, OperatorAssociativity.Left, 2)},
-
 //			{"++", new OperatorInfo("IncrementPrefixed", 2, OperatorAssociativity.Left, 1)},
-			{"++", new OperatorInfoIncrement(2, OperatorAssociativity.Left, 1)},
-
+			{"++", new OperatorInfoIncrement("IncrementPrefixed", "IncrementPostfixed")},
+			{"--", new OperatorInfoIncrement("DecrementPrefixed", "DecrementPostfixed")},
 			{"+", new OperatorInfo("Add", 4, OperatorAssociativity.Left, 2)},
-			{"-", new OperatorInfo("Subtract", 4, OperatorAssociativity.Left, 2)},
-			{"n", new OperatorInfo("Negate", 2, OperatorAssociativity.Right, 1, false)}, // unary "-", to distinguish it from subtraction
+			//{"-", new OperatorInfo("Subtract", 4, OperatorAssociativity.Left, 2)},
+			{"-", new OperatorInfoMinusSign()},
+		//	{"n", new OperatorInfo("Negate", 2, OperatorAssociativity.Right, 1, false)}, // unary "-", to distinguish it from subtraction
 
 			{"<=", new OperatorInfo("LessThanOrEqual", 6, OperatorAssociativity.Left, 2)},
 			{"<", new OperatorInfo("LessThan", 6, OperatorAssociativity.Left, 2)},
@@ -53,19 +53,8 @@ namespace Pinion.Compiler.Internal
 		{
 			foreach (KeyValuePair<string, IOperatorInfo> operatorInfo in operatorsToInstructions)
 			{
-				// Some operators are only used internally, post-splitting.
-				// If they occur in the source code, they should be ignored.
-				if (operatorInfo.Value.AffectsTokenization)
-					operatorTokens.Add(operatorInfo.Key);
+				operatorTokens.Add(operatorInfo.Key);
 			}
-		}
-
-		private static int GetOperatorPrecedence(string token)
-		{
-			if (operatorsToInstructions.ContainsKey(token))
-				return operatorsToInstructions[token].Precedence;
-
-			return int.MaxValue;
 		}
 	}
 }

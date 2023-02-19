@@ -181,56 +181,8 @@ namespace Pinion
 			return Mathf.Abs(number);
 		}
 
-		// // This essentially a dummy method. 
-		// // The ReplaceInstruction value on the APICustomCompileRequired means standard compilation behavior will *always* be replaced with custom compilation logic.
-		// [APIMethod]
-		// [APICustomCompileRequired(nameof(IncrementIntCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.ReplaceInstruction)]
-		// [DocMethodOperatorReplace("++")]
-		// public static int Increment(int value)
-		// {
-		// 	// int a = 1;
-		// 	// int b = 2;
-		// 	// int test = a++ b;
-
-
-		// 	// Debug.Log(test);
-		// 	return ++value;
-		// }
-
-		// [APICustomCompileIdentifier]
-		// private static void IncrementIntCompileHandler(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes, System.Action<string> compileErrorHandler)
-		// {
-		// 	// Compiler should already have ensured signature match at this point. 
-		// 	// We can be reasonably sure there is exactly one argument of the right type.
-		// 	CompilerArgument arg = providedArguments[0];
-
-		// 	// Disallow using increment decrement operator with anything but variables. To do otherwise is pointless anyway, and saves complexity.
-		// 	if (arg.argumentSource != CompilerArgument.ArgSource.Variable)
-		// 	{
-		// 		compileErrorHandler(messageIncrementVariableOnly);
-		// 		return;
-		// 	}
-
-		// 	// Compilation of the Increment operator breaks down into prefixed and suffixed.
-		// 	// Current behavior is always 'prefixed'.
-
-		// 	instructionCodes.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.IncrementIntVariablePrefix).instructionCode);
-		// 	instructionCodes.Add(arg.variablePointer.GetIndexInRegister());
-		// }
-
-		// [APIInternalMethodIdentifier(PinionAPIInternalIDs.IncrementIntVariablePrefix)]
-		// [APIMethod(MethodFlags = APIMethodFlags.Internal)]
-		// public static int IncrementVariablePrefix(PinionContainer container, int value)
-		// {
-		// 	++value;
-		// 	container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value);
-		// 	return value;
-		// }
-
-		// This essentially a dummy method. 
-		// The ReplaceInstruction value on the APICustomCompileRequired means standard compilation behavior will *always* be replaced with custom compilation logic.
 		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementIntCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
 		[DocMethodOperatorReplace("++")]
 		public static int IncrementPrefixed(PinionContainer container, int value)
 		{
@@ -239,14 +191,80 @@ namespace Pinion
 			return value;
 		}
 
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[DocMethodOperatorReplace("++")]
+		public static float IncrementPrefixed(PinionContainer container, float value)
+		{
+			++value;
+			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), value);
+			return value;
+		}
+
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[DocMethodOperatorReplace("++")]
+		public static int IncrementPostfixed(PinionContainer container, int value)
+		{
+			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value + 1);
+			return value;
+		}
+
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[DocMethodOperatorReplace("++")]
+		public static float IncrementPostfixed(PinionContainer container, float value)
+		{
+			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), value + 1f);
+			return value;
+		}
+
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[DocMethodOperatorReplace("--")]
+		public static int DecrementPrefixed(PinionContainer container, int value)
+		{
+			--value;
+			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value);
+			return value;
+		}
+
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[DocMethodOperatorReplace("--")]
+		public static float DecrementPrefixed(PinionContainer container, float value)
+		{
+			--value;
+			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), value);
+			return value;
+		}
+
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[DocMethodOperatorReplace("--")]
+		public static int DecrementPostfixed(PinionContainer container, int value)
+		{
+			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value - 1);
+			return value;
+		}
+
+		[APIMethod]
+		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
+		[DocMethodOperatorReplace("--")]
+		public static float DecrementPostfixed(PinionContainer container, float value)
+		{
+			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), value - 1f);
+			return value;
+		}
+
 		[APICustomCompileIdentifier]
-		private static void IncrementIntCompileHandler(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes, System.Action<string> compileErrorHandler)
+		private static void IncrementCompileHandler(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes, System.Action<string> compileErrorHandler)
 		{
 			// Compiler should already have ensured signature match at this point. 
 			// We can be reasonably sure there is exactly one argument of the right type.
 			CompilerArgument arg = providedArguments[0];
 
-			// Disallow using increment decrement operator with anything but variables. To do otherwise is pointless anyway, and saves complexity.
+			// Disallow using increment/decrement operator with anything but variables. To do otherwise is pointless anyway.
 			if (arg.argumentSource != CompilerArgument.ArgSource.Variable)
 			{
 				compileErrorHandler(messageIncrementVariableOnly);

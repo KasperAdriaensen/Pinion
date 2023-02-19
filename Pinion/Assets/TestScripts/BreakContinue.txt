@@ -1,0 +1,38 @@
+declare (int, $iterations, 0)
+
+while ($iterations < 20)
+	$iterations++
+endwhile
+
+AssertEquals($iterations, 20)
+
+
+set ($iterations, 0)
+
+while ($iter  ations < 20)
+	$iterations++
+	if ($iterations >= 10)
+		break
+	endif
+endwhile
+
+AssertEquals($iterations, 10)
+
+
+
+set ($iterations, 0)
+declare (string, $stringOutput)
+
+while ($iterations < 20)
+	
+	$iterations++
+
+	if ($iterations < 12)
+		continue
+	endif
+
+	set ($stringOutput, $stringOutput + ToString($iterations))
+endwhile
+
+AssertEquals($iterations, 20)
+AssertEquals($stringOutput, "121314151617181920")

@@ -208,7 +208,7 @@ namespace Pinion
 			// If it is invalid - compilation did not do it's just job correctly.
 			InstructionData instructionData = instructionLookUpTable[instructionCode];
 
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+#if UNITY_EDITOR && PINION_RUNTIME_DEBUG
 
 			string signature = string.Empty;
 			for (int i = 0; i < instructionData.exposedParameterCount; i++)
@@ -222,9 +222,9 @@ namespace Pinion
 			Debug.Log($"Calling: {instructionData.instructionString}({signature}).");
 #endif
 
-			if (instructionData.requiresContainer)
+			if (instructionData.RequiresContainer)
 			{
-				instructionParametersReuse[0] = callingContainer.StackWrapper; // the container is never on the stack
+				instructionParametersReuse[0] = callingContainer.GetStackWrapperAs(instructionData.requiredContainerType); // the container is never on the stack
 
 				// Arguments are on the stack in "reverse" order. First popped argument is the last one!
 				// start from compileData.parameterCount -> first index is (skipped index 0) + (compileData.parameterCount-1)
@@ -232,7 +232,7 @@ namespace Pinion
 				for (int i = instructionData.exposedParameterCount; i > 0; i--)
 				{
 					instructionParametersReuse[i] = callingContainer.PopFromStack();
-					Debug.Log(instructionParametersReuse[i]);
+					//Debug.Log(instructionParametersReuse[i]);
 				}
 			}
 			else
@@ -243,7 +243,7 @@ namespace Pinion
 				for (int i = instructionData.exposedParameterCount - 1; i >= 0; i--)
 				{
 					instructionParametersReuse[i] = callingContainer.PopFromStack();
-					Debug.Log(instructionParametersReuse[i]);
+					//Debug.Log(instructionParametersReuse[i]);
 				}
 			}
 

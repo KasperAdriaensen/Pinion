@@ -9,12 +9,14 @@ namespace Pinion.Compiler.Internal
 {
 	public class InstructionData
 	{
+		public bool RequiresContainer => (requiredContainerType != null);
+
 		public readonly ushort instructionCode = 0;
 		public readonly string instructionString = string.Empty;
 		public readonly bool internalInstruction = false;
 		public readonly Type returnType = null;
 		public readonly int fullParameterCount = 0;
-		public readonly bool requiresContainer = false;
+		public readonly Type requiredContainerType = null;
 		public readonly int exposedParameterCount = 0;
 
 		private const BindingFlags customCompileHandlerBindingFlags = BindingFlags.DeclaredOnly | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
@@ -32,7 +34,7 @@ namespace Pinion.Compiler.Internal
 			this.returnType = methodInfo.ReturnType;
 			customCompileHandlers = LinkCustomCompileHandlers(methodInfo);
 
-			this.parameterTypes = BuildAndVerifyParameters(methodInfo, out this.requiresContainer, out this.exposedParameterCount);
+			this.parameterTypes = BuildAndVerifyParameters(methodInfo, out this.requiredContainerType, out this.exposedParameterCount);
 			this.fullParameterCount = this.parameterTypes.Length;
 
 			invoker = InstructionInvoker.Create(methodInfo, this.parameterTypes);
@@ -90,9 +92,9 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 			return results;
 		}
 
-		private Type[] BuildAndVerifyParameters(MethodInfo methodInfo, out bool firstIsContainer, out int exposedParamsAmount)
+		private Type[] BuildAndVerifyParameters(MethodInfo methodInfo, out Type requiredContainerType, out int exposedParamsAmount)
 		{
-			firstIsContainer = false;
+			requiredContainerType = null;
 
 			Type[] foundParameters = methodInfo.GetParameters().Select((ParameterInfo p) => p.ParameterType).ToArray();
 
@@ -111,11 +113,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 					if (i > 0)
 						throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: parameter deriving from {typeof(PinionContainer)} can only be first parameter. Encountered it at parameter index {i}.");
 
-					// No longer a requirement. First PinionContainer parameter should now be "hidden" everywhere.
-					// if (internalInstruction == false)
-					// 	throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: parameter of type {typeof(PinionContainer)} can only be used in internal API methods.");
-
-					firstIsContainer = true;
+					requiredContainerType = parameterType;
 				}
 				else
 				{
@@ -123,7 +121,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 				}
 			}
 
-			exposedParamsAmount = firstIsContainer ? foundParameters.Length - 1 : foundParameters.Length;
+			exposedParamsAmount = (requiredContainerType != null) ? foundParameters.Length - 1 : foundParameters.Length;
 
 			if (returnType != typeof(void) && !PinionTypes.IsSupportedPublicType(returnType))
 				throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: API methods must return a supported type. Method returns {returnType}");
@@ -142,9 +140,10 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 				invoker.Invoke(parameters);
 			}
 		}
+
 		public Type GetParameterType(int parameterIndex)
 		{
-			if (requiresContainer)
+			if (RequiresContainer)
 				return parameterTypes[parameterIndex + 1];
 			else
 				return parameterTypes[parameterIndex];
@@ -155,7 +154,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 			if (callingContainer == null)
 				throw new ArgumentNullException(nameof(callingContainer));
 
-			if (requiresContainer && parameterTypes != null && parameterTypes.Length > 0)
+			if (RequiresContainer && parameterTypes != null && parameterTypes.Length > 0)
 				return IsTypeOrSubtype(callingContainer.GetType(), parameterTypes[0]);
 
 			return true;
@@ -163,7 +162,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 
 		public Type GetExpectedContainerType()
 		{
-			return requiresContainer ? parameterTypes[0] : null;
+			return RequiresContainer ? parameterTypes[0] : null;
 		}
 
 		private static bool IsTypeOrSubtype(Type inputType, Type compareType)

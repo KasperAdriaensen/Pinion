@@ -12,6 +12,9 @@ namespace Pinion.ContainerMemory
 
 		public static Type GetStackValueType(Type valueType)
 		{
+			// Dictionary maps T to StackValue<T>.
+
+			// If not yet in dictionary, create it now.
 			if (!valueTypesToStackValueTypes.TryGetValue(valueType, out Type stackValueType))
 			{
 				stackValueType = typeof(StackValue<>).MakeGenericType(valueType);
@@ -23,6 +26,9 @@ namespace Pinion.ContainerMemory
 
 		public static ConstructorInfo GetConstructorInfo(Type valueType)
 		{
+			// Dictionary maps StackValue<T> to that type's Constructor
+
+			// If not yet in dictionary, create it now.
 			if (!stackValueTypesToConstructors.TryGetValue(valueType, out ConstructorInfo constructorInfo))
 			{
 				Type stackValueType = GetStackValueType(valueType);
@@ -34,6 +40,9 @@ namespace Pinion.ContainerMemory
 
 		public static MethodInfo GetReadMethodInfo(Type valueType)
 		{
+			// Dictionary maps StackValue<T> to that type's Read function.
+
+			// If not yet in dictionary, create it now.
 			if (!stackValueTypesToReadMethodInfos.TryGetValue(valueType, out MethodInfo methodInfo))
 			{
 				Type stackValueType = GetStackValueType(valueType);
@@ -42,6 +51,22 @@ namespace Pinion.ContainerMemory
 			}
 
 			return methodInfo;
+		}
+
+		public static StackValue<T> GetContainerWrapper<T>(T container) where T : PinionContainer
+		{
+			Type containerType = typeof(T);
+			Type wrapperType = GetStackValueType(containerType);
+			object wrapper = Activator.CreateInstance(wrapperType, container);
+			StackValue<T> wrapperTyped = (StackValue<T>)wrapper;
+			return wrapperTyped;
+		}
+
+		public static StackValue GetContainerWrapper(Type desiredContainerType, PinionContainer container)
+		{
+			Type wrapperType = GetStackValueType(desiredContainerType);
+			StackValue wrapper = (StackValue)Activator.CreateInstance(wrapperType, container);
+			return wrapper;
 		}
 
 		public abstract Type GetValueType();

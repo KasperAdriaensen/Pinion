@@ -17,66 +17,128 @@ namespace Pinion.Compiler.Internal
 
 	public interface IOperatorInfo
 	{
-		public ushort Precedence { get; }
-		public OperatorAssociativity Associativity { get; }
-		public ushort ArgumentCount { get; }
-		// set to false to disallow splitting the input string on this operator (e.g. for "hidden" operators like the unary "-", which is internally replaced by "n".
-		public bool AffectsTokenization { get; }
-		public string GetInstructionString(Token operatorToken, IReadOnlyList<CompilerArgument> args);
+		public string GetInstructionString(Token currentToken, IReadOnlyList<Token> expressionTokens, IReadOnlyList<CompilerArgument> args);
+		public ushort GetPrecedence(Token currentToken, IReadOnlyList<Token> expressionTokens);
+		public OperatorAssociativity GetAssociativity(Token currentToken, IReadOnlyList<Token> expressionTokens);
+		public ushort GetArgumentCount(Token currentToken, IReadOnlyList<Token> expressionTokens);
 	}
 
 	// Used in parsing to correctly sort operator precedence etc.
 	public struct OperatorInfo : IOperatorInfo
 	{
-		public ushort Precedence { get; private set; }
-		public OperatorAssociativity Associativity { get; private set; }
-		public ushort ArgumentCount { get; private set; }
-		public bool AffectsTokenization { get; private set; }
+		private ushort precedence;
+		private OperatorAssociativity associativity;
+		private ushort argumentCount;
 		private string instructionString;
 
-		public OperatorInfo(string instructionString, ushort precedence, OperatorAssociativity associativity, ushort argumentCount, bool affectsTokenization = true)
+		public OperatorInfo(string instructionString, ushort precedence, OperatorAssociativity associativity, ushort argumentCount)
 		{
-			this.Precedence = precedence;
-			this.Associativity = associativity;
-			this.ArgumentCount = argumentCount;
-			this.AffectsTokenization = affectsTokenization;
+			this.precedence = precedence;
+			this.associativity = associativity;
+			this.argumentCount = argumentCount;
 			this.instructionString = instructionString;
 		}
 
-		public string GetInstructionString(Token operatorToken, IReadOnlyList<CompilerArgument> args)
+		public string GetInstructionString(Token currentToken, IReadOnlyList<Token> expressionTokens, IReadOnlyList<CompilerArgument> args)
 		{
 			return instructionString;
+		}
+
+		public ushort GetPrecedence(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			return precedence;
+		}
+
+		public OperatorAssociativity GetAssociativity(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			return associativity;
+		}
+
+		public ushort GetArgumentCount(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			return argumentCount;
 		}
 	}
 
 	public struct OperatorInfoIncrement : IOperatorInfo
 	{
-		public ushort Precedence { get; private set; }
-		public OperatorAssociativity Associativity { get; private set; }
-		public ushort ArgumentCount { get; private set; }
-		public bool AffectsTokenization { get; private set; }
+		private string prefixedInstruction;
+		private string postfixedInstruction;
 
-		public OperatorInfoIncrement(ushort precedence, OperatorAssociativity associativity, ushort argumentCount, bool affectsTokenization = true)
+		public OperatorInfoIncrement(string prefixedInstruction, string postfixedInstruction)
 		{
-			this.Precedence = precedence;
-			this.Associativity = associativity;
-			this.ArgumentCount = argumentCount;
-			this.AffectsTokenization = affectsTokenization;
+			this.prefixedInstruction = prefixedInstruction;
+			this.postfixedInstruction = postfixedInstruction;
 		}
 
-		public string GetInstructionString(Token operatorToken, IReadOnlyList<CompilerArgument> args)
+		private bool IsPostfix(Token currentToken, IReadOnlyList<Token> expressionTokens, IReadOnlyList<CompilerArgument> args)
 		{
-			CompilerArgument arg = args[0];
+			if (args.Count < 1)
+				return true;
 
-			if (operatorToken.index > arg.token.index)
-			{
-				return "IncrementPostfixed";
-			}
-			else
-			{
-				return "IncrementPrefixed";
-			}
+			// I.e. does ++ come *after* the argument it is operating upon?
+			return currentToken.index > args[0].token.index;
+		}
+
+		public string GetInstructionString(Token currentToken, IReadOnlyList<Token> expressionTokens, IReadOnlyList<CompilerArgument> args)
+		{
+			return IsPostfix(currentToken, expressionTokens, args) ? postfixedInstruction : prefixedInstruction;
+		}
+
+		public ushort GetPrecedence(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			return 2; // same for both versions of operator
+		}
+
+		public OperatorAssociativity GetAssociativity(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			return OperatorAssociativity.Left;
+		}
+
+		public ushort GetArgumentCount(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			return 2; // same for both versions of operator
 		}
 	}
 
+	public struct OperatorInfoMinusSign : IOperatorInfo
+	{
+		private bool IsNegativeMarker(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			if (currentToken.index <= 0)
+				return true;
+
+			Token previousToken = expressionTokens[currentToken.index - 1];
+
+			// conditions under which "-" should be read as negate instead of subtract
+			if (previousToken == PinionCompiler.ArgSeparator ||
+				previousToken == PinionCompiler.ParenthesisOpen ||
+				OperatorLookup.IsOperator(previousToken))
+				return true;
+
+			return false;
+		}
+
+		public ushort GetArgumentCount(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			// Can't do implicit casting with a ternary operator.
+			return (ushort)(IsNegativeMarker(currentToken, expressionTokens) ? 1 : 2);
+		}
+
+		public OperatorAssociativity GetAssociativity(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			return IsNegativeMarker(currentToken, expressionTokens) ? OperatorAssociativity.Right : OperatorAssociativity.Left;
+		}
+
+		public string GetInstructionString(Token currentToken, IReadOnlyList<Token> expressionTokens, IReadOnlyList<CompilerArgument> args)
+		{
+			return IsNegativeMarker(currentToken, expressionTokens) ? "Negate" : "Subtract";
+		}
+
+		public ushort GetPrecedence(Token currentToken, IReadOnlyList<Token> expressionTokens)
+		{
+			// Can't do implicit casting with a ternary operator.
+			return (ushort)(IsNegativeMarker(currentToken, expressionTokens) ? 2 : 4);
+		}
+	}
 }

@@ -1,6 +1,0 @@
-If (GetDroneHeightAbsolute() > 20f)
-	DisplayMessage("THE DRONE IS TOO DAMN HIGH", "heightwarning")
-Else
-	RemoveMessage("heightwarning")
-EndIf
-

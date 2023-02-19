@@ -1,14 +1,11 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.Text;
-using Pinion;
 using System.Reflection;
 using System;
 using Pinion.Compiler.Internal;
 using System.IO;
-using Pinion.Documentation;
 using System.Text.RegularExpressions;
 
 namespace Pinion.Documentation
@@ -20,7 +17,6 @@ namespace Pinion.Documentation
 
 		[SerializeField]
 		private string skipList = string.Empty;
-
 
 		private const string typeColor = "#c4c8e5";
 		private const string parameterNameEmphasis = "*";
@@ -245,8 +241,7 @@ namespace Pinion.Documentation
 
 			operatorString = "\\" + operatorString; // \ for Markdown escape
 
-			int argumentCount = operatorInfo.ArgumentCount;
-			int parameterCounter = 0;
+			//	int parameterCounter = 0;
 
 			stringBuilder.Append("operator ");
 			stringBuilder.Append(FormatInstructionName(operatorString));
@@ -260,9 +255,6 @@ namespace Pinion.Documentation
 
 				if (parameterType == typeof(PinionContainer) || parameterType.IsSubclassOf(typeof(PinionContainer)))
 					continue;
-
-				if (parameterCounter >= (argumentCount - 1))
-					stringBuilder.Append(", ");
 
 				// if (parameterCounter >= (argumentCount - 1))
 				// {
@@ -278,7 +270,10 @@ namespace Pinion.Documentation
 				stringBuilder.Append(FormatParameterName(parameter.Name));
 				stringBuilder.Append(" ");
 
-				parameterCounter++;
+				if (i < (parameters.Length - 1))
+					stringBuilder.Append(", ");
+
+				//parameterCounter++;
 			}
 		}
 

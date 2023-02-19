@@ -70,7 +70,7 @@ namespace Pinion.Compiler
 				}
 				else if (!matchedInstruction.IsValidForCallingContainer(targetContainer)) // Check this before other conditions - it could be preventing an otherwise identical parameter list from matching.
 				{
-					errorMessage = $"Instruction {instructionString} is not valid within this script type. It is restricted to a container of type {matchedInstruction.GetExpectedContainerType()}";
+					errorMessage = $"Instruction {instructionString} is not valid within this container type. It is restricted to a container of type {matchedInstruction.GetExpectedContainerType()}";
 				}
 				else if (matchedInstruction.exposedParameterCount <= 0) // If there are no parameters, we can't generate a more meaningful message. 
 				{

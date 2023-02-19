@@ -1,0 +1,31 @@
+declare(int, $test, 0)
+
+for(declare(int, $i, 0); $i<10; $ i++)
+	set ($test, $test + 2)
+endfor
+
+AssertEquals($test, 20)
+
+set ($test, 0)
+
+for(declare(int, $j, 0); $j<10; $j++)
+	set ($test, $test + 2)
+	if ($test >= 12)
+		break
+	endif
+endfor
+
+AssertEquals($test, 12)
+
+set ($test, 1)
+
+for(declare(int, $k, 0); $k<10; $k++)
+
+	if ($test >= 243)
+		continue
+	endif
+
+	set ($test, $test * 3)
+endfor
+
+AssertEquals($test, 243)

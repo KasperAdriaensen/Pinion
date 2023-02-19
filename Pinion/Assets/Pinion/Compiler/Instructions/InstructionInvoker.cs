@@ -46,17 +46,17 @@ namespace Pinion.Compiler.Internal
 
 		public StackValue Invoke(params StackValue[] args)
 		{
-			string argString = string.Empty;
-			foreach (StackValue v in args)
-			{
-				if (v == null)
-					break;
+			//// For low-level debugging of arguments.
+			// string argString = "args: ";
+			// foreach (StackValue v in args)
+			// {
+			// 	if (v == null)
+			// 		break;
 
-				argString += $"{v.GetValueType().ToString()}, ";
+			// 	argString += $"{v.GetValueType().ToString()}, ";
 
-			}
-
-			Debug.Log(argString);
+			// }
+			// Debug.Log(argString);
 
 			return wrapper(innerDelegate, args);
 		}
@@ -77,6 +77,8 @@ namespace Pinion.Compiler.Internal
 			// C# will test compatibility anyway - no way to avoid this?
 			Delegate innerDelegate = Delegate.CreateDelegate(innerDelegateType, methodInfo);
 
+			// Finally create a "wrapper" delegate which takes a StackValue array, converts each arg to the expected type
+			// and then passes it to the inner delegate above.
 			return new InstructionInvoker(innerDelegate, GetOrCreateMethodWrapper(innerDelegateType, innerDelegate, parameterTypes));
 		}
 
@@ -95,7 +97,6 @@ namespace Pinion.Compiler.Internal
 			// Last element is return type. Return type can be void.
 
 			Type[] typesIncludingReturn = new Type[arguments.Length + 1];
-
 			Array.Copy(arguments, typesIncludingReturn, arguments.Length);
 			typesIncludingReturn[arguments.Length] = returnType;
 
@@ -138,7 +139,7 @@ namespace Pinion.Compiler.Internal
 			if (innerDelegateToWrapperMap.ContainsKey(innerDelegateType))
 				return innerDelegateToWrapperMap[innerDelegateType];
 
-			// Writes logic for converting untyped object[] to invidual, typed arguments.
+			// Writes logic for converting untyped StackValue[] to invidual, typed arguments.
 			CreateParamsExpressions(parameterTypes, out ParameterExpression paramsExpUntyped, out Expression[] paramsExpTyped);
 
 			// Inner delegate is passed in as an abstract "Delegate", but we need to be able to call with a fully specified signature.
@@ -188,17 +189,20 @@ namespace Pinion.Compiler.Internal
 			paramsExpUntyped = Expression.Parameter(typeof(StackValue[]), "untypedArgs"); // these are the untyped arguments fed to the wrapping lambda
 			paramsExpTyped = new Expression[parameterTypes.Length]; // these are the typed arguments fed to inner delegate
 
-			// These basically write the code for "(paramsExpTyped[i]) args[i]"
 			for (int i = 0; i < parameterTypes.Length; i++)
 			{
+				// Old object-based approach, preserved for posterity
 				// ConstantExpression constExp = Expression.Constant(i, typeof(int)); // create a "literal" int with value i
 				// BinaryExpression untypedArgument = Expression.ArrayIndex(paramsExpUntyped, constExp); // retrieve array element in object[] at index constExp
 				// paramsExpTyped[i] = Expression.Convert(untypedArgument, parameterTypes[i]); // convert object to correct type
 
-				ConstantExpression constExp = Expression.Constant(i, typeof(int)); // create a "literal" int with value i
-				BinaryExpression untypedArgument = Expression.ArrayIndex(paramsExpUntyped, constExp); // retrieve array element in object[] at index constExp
+				// Create a "literal" int with value i.
+				ConstantExpression constExp = Expression.Constant(i, typeof(int));
+				// Retrieve array element in StackValue[] at index constExp.
+				BinaryExpression untypedArgument = Expression.ArrayIndex(paramsExpUntyped, constExp);
+				// Convert StackValue to matching StackValue<T>.
 				UnaryExpression typedArgument = Expression.Convert(untypedArgument, StackValue.GetStackValueType(parameterTypes[i]));
-
+				// On the StackValue<T>, call the Read method, which will return a value of type T.
 				paramsExpTyped[i] = Expression.Call(typedArgument, StackValue.GetReadMethodInfo(parameterTypes[i]));
 			}
 		}

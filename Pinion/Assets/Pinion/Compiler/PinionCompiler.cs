@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using System.Text.RegularExpressions;
 using System;
@@ -43,10 +41,31 @@ namespace Pinion.Compiler
 
 		public static PinionContainer Compile(string script, System.Action<string> errorMessageReceiver = null)
 		{
-			return Compile<PinionContainer>(script, errorMessageReceiver);
+			return CompileInternal<PinionContainer>(script, errorMessageReceiver);
+		}
+
+		public static PinionContainer Compile(Type containerType, string script, System.Action<string> errorMessageReceiver = null)
+		{
+			if (Application.isPlaying)
+			{
+				throw new NotSupportedException("Creating a PinionContainer with type parameter is not permitted at runtime. Use the generic method overload instead.");
+			}
+
+			if (!(typeof(PinionContainer)).IsAssignableFrom(containerType))
+			{
+				throw new ArgumentException("Container type must inherit from PinionContainer.", nameof(containerType));
+			}
+
+			PinionContainer container = (PinionContainer)Activator.CreateInstance(containerType);
+			return CompileInternal<PinionContainer>(script, errorMessageReceiver, container);
 		}
 
 		public static T Compile<T>(string script, System.Action<string> errorMessageReceiver = null) where T : PinionContainer, new()
+		{
+			return CompileInternal<T>(script, errorMessageReceiver);
+		}
+
+		private static T CompileInternal<T>(string script, System.Action<string> errorMessageReceiver = null, T targetContainer = null) where T : PinionContainer, new()
 		{
 			compileErrorCallback = errorMessageReceiver;
 
@@ -68,7 +87,7 @@ namespace Pinion.Compiler
 			if (!compileSuccess) // Parsing meta block could spawn an error. Don't bother beyond this point.
 				return null;
 
-			T newContainer = new T();
+			T newContainer = (targetContainer != null) ? targetContainer : new T();
 
 			if (metaBlock != null) // A meta-block was present, whatever its contents may be.
 				newContainer.ParseMetaData(metaBlock, AddCompileError);
@@ -84,6 +103,7 @@ namespace Pinion.Compiler
 
 			compileErrorCallback = null;
 			CurrentBlockContext = ScriptBlock.None;
+			newContainer.GenerateStackWrappers();
 
 			if (compileSuccess)
 			{

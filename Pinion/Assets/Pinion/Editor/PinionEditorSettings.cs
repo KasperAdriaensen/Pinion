@@ -18,11 +18,15 @@ public class PinionEditorSettings : EditorWindow
 
 	private static List<string> projectDefines = new List<string>
 	{
-		compileDebug
+		compileDebug,
+		runtimeDebug
 	};
 
 	private const string compileDebug = "PINION_COMPILE_DEBUG";
 	private bool compileDebugActive = false;
+
+	private const string runtimeDebug = "PINION_RUNTIME_DEBUG";
+	private bool runtimeDebugActive = false;
 
 
 	[MenuItem("Window/Pinion/Pinion Settings")]
@@ -36,6 +40,7 @@ public class PinionEditorSettings : EditorWindow
 	private void OnEnable()
 	{
 		compileDebugActive = CurrentDefines.Contains(compileDebug);
+		runtimeDebugActive = CurrentDefines.Contains(runtimeDebug);
 	}
 
 	private void OnGUI()
@@ -47,8 +52,12 @@ public class PinionEditorSettings : EditorWindow
 		}
 
 		EditorGUI.BeginChangeCheck();
-		EditorGUILayout.HelpBox("If enabled, compilation and execution of any scripts will output highly verbose debug information. Likely to have a performance impact. Will never be active in builds.", MessageType.Info);
+		EditorGUILayout.HelpBox("If enabled, compilation of Pinion scripts will output highly verbose, step-by-step information. Will have performance impact on compilation. Will never be active in builds.", MessageType.Info);
 		compileDebugActive = EditorGUILayout.Toggle("Debug Pinion compiler", compileDebugActive);
+
+		EditorGUILayout.HelpBox("If enabled, execution of Pinion scripts will output highly verbose, step-by-step information. Will have a major performance impact. Will never be active in builds.", MessageType.Info);
+		runtimeDebugActive = EditorGUILayout.Toggle("Debug Pinion runtime", runtimeDebugActive);
+
 
 		if (EditorGUI.EndChangeCheck())
 		{
@@ -60,10 +69,13 @@ public class PinionEditorSettings : EditorWindow
 	{
 		List<string> newDefines = CurrentDefines;
 		// remove of all of our defines, keep the ones added by other code
-		newDefines.RemoveAll((string define) => projectDefines.Contains(define));
+		newDefines.RemoveAll(define => projectDefines.Contains(define));
 
 		if (compileDebugActive)
 			newDefines.Add(compileDebug);
+
+		if (runtimeDebugActive)
+			newDefines.Add(runtimeDebug);
 
 		string concatenatedDefines = string.Join(";", newDefines.ToArray());
 

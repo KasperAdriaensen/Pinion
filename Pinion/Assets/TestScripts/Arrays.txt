@@ -1,0 +1,9 @@
+declare(int[], $test, {0,1,2})
+
+AssertEquals($test[0], 0)
+AssertEquals($test[1], 1)
+AssertEquals($test[2], 2)
+AssertEquals($test[1+1], 2)
+AssertEquals($test[2-1], 1)
+
+

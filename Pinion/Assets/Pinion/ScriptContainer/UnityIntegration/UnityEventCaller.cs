@@ -81,11 +81,12 @@ namespace Pinion.Utility
 				onFixedUpdate();
 		}
 
-		// Normally this Monobehaviour not be destroyed between scenes, but should it happen anyway (or when exiting play mode): this cleanly clears all subscribed events.
+		// Normally this Monobehaviour should not be destroyed between scenes, but should it happen anyway (or when exiting play mode): this cleanly clears all subscribed events.
 		private void OnDestroy()
 		{
 			onUpdate = null;
 			onFixedUpdate = null;
+			instance = null;
 		}
 	}
 }
