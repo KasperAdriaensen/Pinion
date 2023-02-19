@@ -60,7 +60,7 @@ namespace Pinion.Compiler
 				index++;
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				debugTokens += expressionPart + "	";
+				debugTokens += expressionPart + "  ";
 #endif
 			}
 

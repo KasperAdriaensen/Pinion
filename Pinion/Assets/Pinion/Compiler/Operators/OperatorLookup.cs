@@ -14,29 +14,32 @@ namespace Pinion.Compiler.Internal
 		// This does not seem very robust, but the for the time being, it is acceptable.
 		private static Dictionary<string, IOperatorInfo> operatorsToInstructions = new Dictionary<string, IOperatorInfo>
 		{
+			{"++", new OperatorInfoIncrement("IncrementPrefixed", "IncrementPostfixed")},
+			{"--", new OperatorInfoIncrement("DecrementPrefixed", "DecrementPostfixed")},
+			{"+=", new OperatorInfo("AssignAddVariable", 14, OperatorAssociativity.Left, 2)},
+			{"-=", new OperatorInfo("AssignSubtractVariable", 14, OperatorAssociativity.Left, 2)},
+			{"*=", new OperatorInfo("AssignMultiplyVariable", 14, OperatorAssociativity.Left, 2)},
+			{"/=", new OperatorInfo("AssignDivideVariable", 14, OperatorAssociativity.Left, 2)},
+
+			{"==", new OperatorInfo("Equals", 7, OperatorAssociativity.Left, 2)},
+			{"!=", new OperatorInfo("NotEquals", 7, OperatorAssociativity.Left, 2)},
+
+			{"+", new OperatorInfo("Add", 4, OperatorAssociativity.Left, 2)},
+			{"-", new OperatorInfoMinusSign()},
 			{"*", new OperatorInfo("Multiply", 3, OperatorAssociativity.Left, 2)},
 			{"/", new OperatorInfo("Divide", 3, OperatorAssociativity.Left, 2)},
 			{"%", new OperatorInfo("Modulo", 3, OperatorAssociativity.Left, 2)},
-//			{"++", new OperatorInfo("IncrementPrefixed", 2, OperatorAssociativity.Left, 1)},
-			{"++", new OperatorInfoIncrement("IncrementPrefixed", "IncrementPostfixed")},
-			{"--", new OperatorInfoIncrement("DecrementPrefixed", "DecrementPostfixed")},
-			{"+", new OperatorInfo("Add", 4, OperatorAssociativity.Left, 2)},
-			//{"-", new OperatorInfo("Subtract", 4, OperatorAssociativity.Left, 2)},
-			{"-", new OperatorInfoMinusSign()},
-		//	{"n", new OperatorInfo("Negate", 2, OperatorAssociativity.Right, 1, false)}, // unary "-", to distinguish it from subtraction
+			{"!", new OperatorInfo("Not", 2, OperatorAssociativity.Right, 1)},
 
 			{"<=", new OperatorInfo("LessThanOrEqual", 6, OperatorAssociativity.Left, 2)},
 			{"<", new OperatorInfo("LessThan", 6, OperatorAssociativity.Left, 2)},
 			{">=", new OperatorInfo("GreaterThanOrEqual", 6, OperatorAssociativity.Left, 2)},
 			{">", new OperatorInfo("GreaterThan", 6, OperatorAssociativity.Left, 2)},
 
-			{"==", new OperatorInfo("Equals", 7, OperatorAssociativity.Left, 2)},
-			{"!=", new OperatorInfo("NotEquals", 7, OperatorAssociativity.Left, 2)},
-
-			{"!", new OperatorInfo("Not", 2, OperatorAssociativity.Right, 1)},
-
 			{"&&", new OperatorInfo("And", 11, OperatorAssociativity.Left, 2)},
 			{"||", new OperatorInfo("Or", 11, OperatorAssociativity.Left, 2)},
+
+			{"=", new OperatorInfo("AssignVariable", 14, OperatorAssociativity.Left, 2)},
 		};
 
 		public static bool IsOperator(string token)

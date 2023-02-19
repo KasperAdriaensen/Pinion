@@ -1,0 +1,29 @@
+declare(string, $test)
+
+$test = "Test"
+
+AssertEquals($test, "Test")
+
+$test = "Another Test"
+
+AssertEquals($test, "Another Test")
+
+$test += " Again"
+
+AssertEquals($test, "Another Test Again")
+
+
+
+
+declare(int, $testNumber)
+
+$testNumber = 5
+AssertEquals($testNumber, 5)
+$testNumber -= 2
+AssertEquals($testNumber, 3)
+$testNumber += 12
+AssertEquals($testNumber, 15)
+$testNumber *= 3
+AssertEquals($testNumber, 45)
+$testNumber /= 9
+AssertEquals($testNumber, 5)

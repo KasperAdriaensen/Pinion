@@ -1,14 +1,11 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using Pinion;
-using ArgList = System.Collections.ObjectModel.ReadOnlyCollection<System.Type>; // This was getting lengthy.
-using Pinion.Documentation;
-using Pinion.Compiler.Internal;
-using Pinion.Internal;
 
 namespace Pinion
 {
+	using System.Collections.Generic;
+	using UnityEngine;
+	using Pinion.Documentation;
+	using Pinion.Compiler.Internal;
+
 	[APISource]
 	[DocSourceDisplayName("Math")]
 	public static class PinionAPIMath
