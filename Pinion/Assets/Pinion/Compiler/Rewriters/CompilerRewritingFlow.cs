@@ -75,7 +75,7 @@ namespace Pinion.Compiler.Internal
 		// So, while it may seem less "clean", merging these rewrites in a single, more complex method actually made sense.
 		// Besides, the amount of flow control techniques is pretty limited and hasn't changed much in decaces, so all in all, there's
 		// not much to be gained from a "flexible" list of rewrite handlers.
-		public static string RewriteFlowAndExecutionControl(string input, System.Action<string, int> errorMessageHandler)
+		public static string RewriteFlow(string input, System.Action<string, int> errorMessageHandler)
 		{
 			if (errorMessageHandler == null)
 				throw new ArgumentNullException(nameof(errorMessageHandler));

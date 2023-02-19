@@ -168,7 +168,7 @@ namespace Pinion.Compiler
 #endif
 
 			// Converts typical flow control keywords to goto label structure.
-			script = CompilerRewriting.RewriteFlowAndExecutionControl(script, AddCompileError);
+			script = CompilerRewriting.RewriteFlow(script, AddCompileError);
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.Log("Script after rewriting flow control: " + System.Environment.NewLine + script);
