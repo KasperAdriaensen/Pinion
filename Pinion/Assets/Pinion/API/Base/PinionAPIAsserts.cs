@@ -1,26 +1,30 @@
-using System.Collections;
-using System.Collections.Generic;
-using Pinion.Documentation;
-using UnityEngine;
-
 namespace Pinion
 {
+	using Pinion.Documentation;
+	using UnityEngine;
+
 	[APISource]
 	[DocSourceDisplayName("Asserts")]
 	public static class PinionAPIAsserts
 	{
+		/// Logs an error message to the game log file if $0 is false.
+		/// Use with caution, can impact performance.
 		[APIMethod]
 		public static void Assert(bool condition)
 		{
 			Debug.Assert(condition);
 		}
 
+		/// Logs $1 to the game log file if $0 is false.
+		/// Use with caution, can impact performance.
 		[APIMethod]
 		public static void Assert(bool condition, string message)
 		{
 			Debug.Assert(condition, message);
 		}
 
+		/// Logs an error message to the game log file if $0 does not equal $1.
+		/// Use with caution, can impact performance.
 		[APIMethod]
 		public static void AssertEquals(bool valueA, bool valueB)
 		{
@@ -28,6 +32,8 @@ namespace Pinion
 				Assert(valueA.Equals(valueB), $"Boolean value '{valueA}' did not equal value '{valueB}'.");
 		}
 
+		/// Logs an error message to the game log file if $0 does not equal $1.
+		/// Use with caution, can impact performance.
 		[APIMethod]
 		public static void AssertEquals(int valueA, int valueB)
 		{
@@ -35,6 +41,8 @@ namespace Pinion
 				Assert(valueA.Equals(valueB), $"Int value '{valueA}' did not equal value '{valueB}'.");
 		}
 
+		/// Logs an error message to the game log file if $0 does not equal $1.
+		/// Use with caution, can impact performance.
 		[APIMethod]
 		public static void AssertEquals(string valueA, string valueB)
 		{
@@ -42,6 +50,8 @@ namespace Pinion
 				Assert(valueA.Equals(valueB), $"String value '{valueA}' did not equal value '{valueB}'.");
 		}
 
+		/// Logs an error message to the game log file if $0 does not approximately equal $1.
+		/// Use with caution, can impact performance.
 		[APIMethod]
 		public static void AssertEqualsApproximate(float valueA, float valueB)
 		{

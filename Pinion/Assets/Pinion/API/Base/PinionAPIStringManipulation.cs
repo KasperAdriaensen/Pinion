@@ -1,21 +1,18 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using System.Text;
-using System.Globalization;
-using Pinion.Documentation;
 
 namespace Pinion
 {
+	using System.Globalization;
+	using Pinion.Documentation;
+
 	[APISource]
 	[DocSourceDisplayName("Text")]
 	public static class PinionAPIStringManipulation
 	{
 		// NOTE: Obviously, concatenating strings is not actually a mathematical operation.
-		// In every other way, it's just easier to do it that way, so we can effortless link it to the "+" operator.
+		// In every other way, it's just easier to do it that way, so we can effortlessly link it to the "+" operator.
 		// That's why string concatenation is an overload of the mathematical Add, but implemented here.
 
-		/// Combine $0 and $1 into a single string.
+		/// Concatenate $0 and $1 into a single string.
 		[APIMethod]
 		[DocMethodOperatorReplace("+")]
 		public static string Add(string stringA, string stringB)

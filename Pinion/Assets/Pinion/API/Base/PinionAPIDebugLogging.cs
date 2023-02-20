@@ -1,10 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
-using Pinion.Documentation;
-using UnityEngine;
 
 namespace Pinion
 {
+	using Pinion.Documentation;
+	using UnityEngine;
+
 	[APISource]
 	[DocSourceDisplayName("Debugging")]
 	public static class PinionAPIDebugLogging

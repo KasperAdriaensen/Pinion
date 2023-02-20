@@ -44,7 +44,7 @@ namespace Pinion.Compiler
 			return CompileInternal<PinionContainer>(script, errorMessageReceiver);
 		}
 
-		public static PinionContainer Compile(Type containerType, string script, System.Action<string> errorMessageReceiver = null)
+		public static PinionContainer CompileForEditor(Type containerType, string script, System.Action<string> errorMessageReceiver = null)
 		{
 			if (Application.isPlaying)
 			{

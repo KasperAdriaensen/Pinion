@@ -1,4 +1,3 @@
-
 namespace Pinion
 {
 	using System.Collections.Generic;
@@ -10,8 +9,7 @@ namespace Pinion
 	[DocSourceDisplayName("Math")]
 	public static class PinionAPIMath
 	{
-		private const string messageIncrementVariableOnly = "Increment and decrement operator can only be used with variables.";
-
+		/// Returns sum of $0 and $1.
 		[APIMethod]
 		[DocMethodOperatorReplace("+")]
 		public static float Add(float valueA, float valueB)
@@ -19,6 +17,7 @@ namespace Pinion
 			return valueA + valueB;
 		}
 
+		/// Returns sum of $0 and $1.
 		[APIMethod]
 		[DocMethodOperatorReplace("+")]
 		public static int Add(int valueA, int valueB)
@@ -26,6 +25,7 @@ namespace Pinion
 			return valueA + valueB;
 		}
 
+		/// Returns sum of $0 and $1. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("+")]
 		public static float Add(float valueA, int valueB)
@@ -33,6 +33,7 @@ namespace Pinion
 			return valueA + valueB;
 		}
 
+		/// Returns sum of $0 and $1. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("+")]
 		public static float Add(int valueA, float valueB)
@@ -40,6 +41,7 @@ namespace Pinion
 			return valueA + valueB;
 		}
 
+		/// Returns result of subtracting $1 from $0.
 		[APIMethod]
 		[DocMethodOperatorReplace("-")]
 		public static float Subtract(float valueA, float valueB)
@@ -47,6 +49,7 @@ namespace Pinion
 			return valueA - valueB;
 		}
 
+		/// Returns result of subtracting $1 from $0.
 		[APIMethod]
 		[DocMethodOperatorReplace("-")]
 		public static int Subtract(int valueA, int valueB)
@@ -54,6 +57,7 @@ namespace Pinion
 			return valueA - valueB;
 		}
 
+		/// Returns result of subtracting $1 from $0. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("-")]
 		public static float Subtract(float valueA, int valueB)
@@ -61,6 +65,7 @@ namespace Pinion
 			return valueA - valueB;
 		}
 
+		/// Returns result of subtracting $1 from $0. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("-")]
 		public static float Subtract(int valueA, float valueB)
@@ -68,6 +73,7 @@ namespace Pinion
 			return valueA - valueB;
 		}
 
+		/// Returns the product of $0 and $1.
 		[APIMethod]
 		[DocMethodOperatorReplace("*")]
 		public static float Multiply(float valueA, float valueB)
@@ -75,6 +81,7 @@ namespace Pinion
 			return valueA * valueB;
 		}
 
+		/// Returns the product of $0 and $1.
 		[APIMethod]
 		[DocMethodOperatorReplace("*")]
 		public static int Multiply(int valueA, int valueB)
@@ -82,6 +89,7 @@ namespace Pinion
 			return valueA * valueB;
 		}
 
+		/// Returns the product of $0 and $1. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("*")]
 		public static float Multiply(float valueA, int valueB)
@@ -89,6 +97,7 @@ namespace Pinion
 			return valueA * valueB;
 		}
 
+		/// Returns the product of $0 and $1. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("*")]
 		public static float Multiply(int valueA, float valueB)
@@ -96,6 +105,7 @@ namespace Pinion
 			return valueA * valueB;
 		}
 
+		/// Returns the result of dividing $0 by $1.
 		[APIMethod]
 		[DocMethodOperatorReplace("/")]
 		public static float Divide(float valueA, float valueB)
@@ -103,6 +113,7 @@ namespace Pinion
 			return valueA / valueB;
 		}
 
+		/// Returns the result of dividing $0 by $1. Result is rounded down.
 		[APIMethod]
 		[DocMethodOperatorReplace("/")]
 		public static int Divide(int valueA, int valueB)
@@ -110,6 +121,7 @@ namespace Pinion
 			return valueA / valueB;
 		}
 
+		/// Returns the result of dividing $0 by $1. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("/")]
 		public static float Divide(int valueA, float valueB)
@@ -117,6 +129,7 @@ namespace Pinion
 			return valueA / valueB;
 		}
 
+		/// Returns the result of dividing $0 by $1. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("/")]
 		public static float Divide(float valueA, int valueB)
@@ -124,34 +137,39 @@ namespace Pinion
 			return valueA / valueB;
 		}
 
+		/// Returns the remainder of dividing $0 by $1. Sign matches $0.
 		[APIMethod]
 		[DocMethodOperatorReplace("%")]
-		public static float Modulo(float valueA, float valueB)
+		public static float Remainder(float valueA, float valueB)
 		{
 			return valueA % valueB;
 		}
 
+		/// Returns the remainder of dividing $0 by $1. Sign matches $0.
 		[APIMethod]
 		[DocMethodOperatorReplace("%")]
-		public static int Modulo(int valueA, int valueB)
+		public static int Remainder(int valueA, int valueB)
 		{
 			return valueA % valueB;
 		}
 
+		/// Returns the remainder of dividing $0 by $1. Sign matches $0. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("%")]
-		public static float Modulo(int valueA, float valueB)
+		public static float Remainder(int valueA, float valueB)
 		{
 			return valueA % valueB;
 		}
 
+		/// Returns the remainder of dividing $0 by $1. Sign matches $0. Result is of type float.
 		[APIMethod]
 		[DocMethodOperatorReplace("%")]
-		public static float Modulo(float valueA, int valueB)
+		public static float Remainder(float valueA, int valueB)
 		{
 			return valueA % valueB;
 		}
 
+		/// Returns the negation of $0.
 		[APIMethod]
 		[DocMethodHide()]
 		public static float Negate(float number)
@@ -159,6 +177,7 @@ namespace Pinion
 			return -number;
 		}
 
+		/// Returns the negation of $0.
 		[APIMethod]
 		[DocMethodHide()]
 		public static int Negate(int number)
@@ -166,109 +185,18 @@ namespace Pinion
 			return -number;
 		}
 
+		/// Returns the absolute value of $0.
 		[APIMethod]
 		public static float Absolute(float number)
 		{
 			return Mathf.Abs(number);
 		}
 
+		/// Returns the absolute value of $0.
 		[APIMethod]
 		public static int Absolute(int number)
 		{
 			return Mathf.Abs(number);
-		}
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("++")]
-		public static int IncrementPrefixed(PinionContainer container, int value)
-		{
-			++value;
-			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value);
-			return value;
-		}
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("++")]
-		public static float IncrementPrefixed(PinionContainer container, float value)
-		{
-			++value;
-			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), value);
-			return value;
-		}
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("++")]
-		public static int IncrementPostfixed(PinionContainer container, int value)
-		{
-			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value + 1);
-			return value;
-		}
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("++")]
-		public static float IncrementPostfixed(PinionContainer container, float value)
-		{
-			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), value + 1f);
-			return value;
-		}
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("--")]
-		public static int DecrementPrefixed(PinionContainer container, int value)
-		{
-			--value;
-			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value);
-			return value;
-		}
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("--")]
-		public static float DecrementPrefixed(PinionContainer container, float value)
-		{
-			--value;
-			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), value);
-			return value;
-		}
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("--")]
-		public static int DecrementPostfixed(PinionContainer container, int value)
-		{
-			container.IntRegister.WriteValue(container.AdvanceToNextInstruction(), value - 1);
-			return value;
-		}
-
-		[APIMethod]
-		[APICustomCompileRequired(nameof(IncrementCompileHandler), APICustomCompileRequiredAttribute.HandlerTypes.AfterInstruction)]
-		[DocMethodOperatorReplace("--")]
-		public static float DecrementPostfixed(PinionContainer container, float value)
-		{
-			container.FloatRegister.WriteValue(container.AdvanceToNextInstruction(), value - 1f);
-			return value;
-		}
-
-		[APICustomCompileIdentifier]
-		private static void IncrementCompileHandler(IList<CompilerArgument> providedArguments, IList<ushort> instructionCodes, System.Action<string> compileErrorHandler)
-		{
-			// Compiler should already have ensured signature match at this point. 
-			// We can be reasonably sure there is exactly one argument of the right type.
-			CompilerArgument arg = providedArguments[0];
-
-			// Disallow using increment/decrement operator with anything but variables. To do otherwise is pointless anyway.
-			if (arg.argumentSource != CompilerArgument.ArgSource.Variable)
-			{
-				compileErrorHandler(messageIncrementVariableOnly);
-				return;
-			}
-
-			instructionCodes.Add(arg.variablePointer.GetIndexInRegister());
 		}
 	}
 }

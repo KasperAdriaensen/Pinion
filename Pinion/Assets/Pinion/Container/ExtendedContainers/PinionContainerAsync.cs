@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Pinion.Utility;
 
-namespace Pinion.Unity
+namespace Pinion.ExtendedContainers
 {
 	// Supports "pause until async operation is done" logic.
 	// This can be used to support Unity logic that returns asynchronously, while still treating it as "synchronous" for the purposes of the script itself.

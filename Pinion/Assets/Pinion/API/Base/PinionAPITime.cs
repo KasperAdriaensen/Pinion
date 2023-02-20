@@ -1,10 +1,8 @@
-using System.Collections;
-using System.Collections.Generic;
-using Pinion.Documentation;
-using UnityEngine;
-
 namespace Pinion
 {
+	using Pinion.Documentation;
+	using UnityEngine;
+
 	[APISource]
 	[DocSourceDisplayName("Time")]
 	public static class PinionAPITime
@@ -18,7 +16,7 @@ namespace Pinion
 
 		/// Returns the duration of the last game frame in seconds. Use this to e.g. add to a timer every frame.
 		/// #code
-		/// set($timer, $timer + GetLastFrameDuration())
+		/// $timer += GetLastFrameDuration()
 		/// #endcode
 		[APIMethod]
 		public static float GetLastFrameDuration()

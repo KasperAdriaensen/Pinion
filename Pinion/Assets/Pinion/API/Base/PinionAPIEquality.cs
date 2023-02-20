@@ -1,12 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using Pinion;
-using ArgList = System.Collections.ObjectModel.ReadOnlyCollection<System.Type>; // This was getting lengthy.
-using Pinion.Documentation;
-
-namespace Pinion
+﻿namespace Pinion
 {
+	using Pinion.Documentation;
+
 	[APISource]
 	[DocSourceDisplayName("Equality")]
 	public static class PinionAPIEquality
@@ -122,7 +117,5 @@ namespace Pinion
 		{
 			return valueA != valueB;
 		}
-
-
 	}
 }

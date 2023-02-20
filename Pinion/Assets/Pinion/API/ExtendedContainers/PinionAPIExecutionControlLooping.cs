@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Pinion.Documentation;
 using UnityEngine;
 
-namespace Pinion.Unity
+namespace Pinion.ExtendedContainers
 {
 	[APISource]
 	[DocSourceDisplayName("Script Execution")]

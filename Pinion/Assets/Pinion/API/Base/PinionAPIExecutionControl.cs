@@ -1,16 +1,13 @@
-using System.Collections;
-using System.Collections.Generic;
-using Pinion;
-using Pinion.Documentation;
-using UnityEngine;
-
 namespace Pinion
 {
+	using Pinion.Documentation;
+
 	[APISource]
 	[DocSourceDisplayName("Script Execution")]
 	public static class PinionAPIExecutionControl
 	{
-		/// Pauses the script and makes it resume from this point in the next game frame.
+		/// Pauses the script and makes it resume from this point the next time the calling container executes.
+		/// See documentation of specific container typed for their implementation of the Sleep instruction.
 		/// #code
 		/// while ($keepWaiting)
 		/// 	$name()
@@ -22,7 +19,7 @@ namespace Pinion
 			container.Sleep();
 		}
 
-		/// Stops script execution permanently.
+		/// Stops container execution.
 		[APIMethod]
 		public static void Stop(PinionContainer container)
 		{

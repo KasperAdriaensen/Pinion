@@ -160,7 +160,7 @@ public class PinionQuickTest : EditorWindow
 		stopwatch.Start();
 
 		//compileResult = PinionCompiler.Compile(stringToCompile, CompileErrorHandler);
-		compileResult = PinionCompiler.Compile(containerTypes[selectedContainerType], stringToCompile, HandleCompileError);
+		compileResult = PinionCompiler.CompileForEditor(containerTypes[selectedContainerType], stringToCompile, HandleCompileError);
 
 		stopwatch.Stop();
 		if (timeCompilation)

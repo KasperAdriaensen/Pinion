@@ -16,10 +16,10 @@ namespace Pinion.Compiler.Internal
 		{
 			{"++", new OperatorInfoIncrement("IncrementPrefixed", "IncrementPostfixed")},
 			{"--", new OperatorInfoIncrement("DecrementPrefixed", "DecrementPostfixed")},
-			{"+=", new OperatorInfo("AssignAddVariable", 14, OperatorAssociativity.Left, 2)},
-			{"-=", new OperatorInfo("AssignSubtractVariable", 14, OperatorAssociativity.Left, 2)},
-			{"*=", new OperatorInfo("AssignMultiplyVariable", 14, OperatorAssociativity.Left, 2)},
-			{"/=", new OperatorInfo("AssignDivideVariable", 14, OperatorAssociativity.Left, 2)},
+			{"+=", new OperatorInfo("AddAssignVariable", 14, OperatorAssociativity.Left, 2)},
+			{"-=", new OperatorInfo("SubtractAssign", 14, OperatorAssociativity.Left, 2)},
+			{"*=", new OperatorInfo("MultiplyAssignVariable", 14, OperatorAssociativity.Left, 2)},
+			{"/=", new OperatorInfo("DivideAssignVariable", 14, OperatorAssociativity.Left, 2)},
 
 			{"==", new OperatorInfo("Equals", 7, OperatorAssociativity.Left, 2)},
 			{"!=", new OperatorInfo("NotEquals", 7, OperatorAssociativity.Left, 2)},

@@ -1,9 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
-using Pinion.Internal;
-using UnityEngine;
-
-namespace Pinion
+namespace Pinion.Internal
 {
 	[APISource]
 	public static class PinionAPIInternalEvents

@@ -1,6 +1,4 @@
-using Pinion.Internal;
-
-namespace Pinion
+namespace Pinion.Internal
 {
 	[APISource]
 	public static class PinionAPIInternalReadWrite

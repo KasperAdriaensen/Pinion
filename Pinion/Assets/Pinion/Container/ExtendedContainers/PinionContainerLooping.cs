@@ -5,7 +5,7 @@ using Pinion.Utility;
 using System.IO;
 using Pinion.ContainerMemory;
 
-namespace Pinion.Unity
+namespace Pinion.ExtendedContainers
 {
 	public class PinionContainerLooping : PinionContainer
 	{

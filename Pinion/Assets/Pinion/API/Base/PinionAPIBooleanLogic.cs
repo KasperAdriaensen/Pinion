@@ -1,12 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
-using Pinion.Documentation;
-using UnityEngine;
-
 namespace Pinion
 {
+	using Pinion.Documentation;
+
 	[APISource]
-	[DocSourceDisplayName("Boolean Logic")]
+	[DocSourceDisplayName("Boolean logic")]
 	public static class PinionAPIBooleanLogic
 	{
 		/// Logical NOT. Returns opposite of $0.

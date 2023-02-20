@@ -24,8 +24,8 @@ namespace Pinion.Documentation
 		private Dictionary<Type, string> friendlyTypeDictionary = null;
 
 		private SerializedObject serializedObject = null;
-		private SerializedProperty prop_prependTexts = null;
-		private SerializedProperty prop_skipList = null;
+		private SerializedProperty propPrependTexts = null;
+		private SerializedProperty propSkipList = null;
 
 
 		[MenuItem("Window/Pinion/Documentation Generator")]
@@ -39,18 +39,19 @@ namespace Pinion.Documentation
 		private void OnEnable()
 		{
 			serializedObject = new SerializedObject(this);
-			EditorGUIExtensions.AssignAllSerializedProperties<DocumentationCrawler>(this, serializedObject);
+			propPrependTexts = serializedObject.FindProperty("prependTexts");
+			propSkipList = serializedObject.FindProperty("skipList");
 		}
 
 		private void OnGUI()
 		{
 			serializedObject.Update();
-			EditorGUILayout.HelpBox("Compiles a Markdown-formatted overview of all API instructions in this project. Experimental. Results may vary.", MessageType.Info);
+			EditorGUILayout.HelpBox("Compiles a Markdown-formatted overview of all API instructions in this project.", MessageType.Info);
 
 			GUILayout.Space(20f);
 
 			GUILayout.Label("Other text (Markdown-formatted) to add in front of auto-generated documentation.");
-			EditorGUILayout.PropertyField(prop_prependTexts);
+			EditorGUILayout.PropertyField(propPrependTexts);
 			GUILayout.Space(20f);
 
 			GUILayout.Label("Classes to skip. Comma-separated.");
@@ -58,7 +59,7 @@ namespace Pinion.Documentation
 			{
 				EnterDefaultSkipList();
 			}
-			EditorGUILayout.PropertyField(prop_skipList);
+			EditorGUILayout.PropertyField(propSkipList);
 
 			GUILayout.Space(50f);
 
@@ -78,12 +79,11 @@ namespace Pinion.Documentation
 		{
 			StringBuilder stringBuilder = new StringBuilder();
 
-
-			if (prependTexts.Length > 0) // This accomplishes nothing, except for stopping the compiler from throwing a warning it's not "used" otherwise.
+			if (prependTexts != null && prependTexts.Length > 0) // This accomplishes nothing, except for stopping the compiler from throwing a warning it's not "used" otherwise.
 			{
-				for (int i = 0; i < prop_prependTexts.arraySize; i++)
+				for (int i = 0; i < propPrependTexts.arraySize; i++)
 				{
-					TextAsset textAsset = (TextAsset)prop_prependTexts.GetArrayElementAtIndex(i).objectReferenceValue;
+					TextAsset textAsset = (TextAsset)propPrependTexts.GetArrayElementAtIndex(i).objectReferenceValue;
 
 					if (textAsset != null)
 					{
@@ -91,7 +91,6 @@ namespace Pinion.Documentation
 					}
 				}
 			}
-
 
 			List<Type> allAPISources = new List<Type>();
 			PinionAPI.StoreAllAPISources(allAPISources);
@@ -201,8 +200,15 @@ namespace Pinion.Documentation
 			}
 
 			string fileContents = stringBuilder.ToString();
+			string fileName = "APIDocumentation.md";
+			string pathOnDisk = UnityEngine.Application.dataPath + Path.DirectorySeparatorChar + fileName;
+			string pathInAssets = "Assets/" + fileName;
 
-			File.WriteAllText(UnityEngine.Application.dataPath + Path.DirectorySeparatorChar + "APIDocumentation.md", fileContents);
+			File.WriteAllText(pathOnDisk, fileContents);
+			AssetDatabase.Refresh();
+
+			EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<TextAsset>(pathInAssets));
+			Debug.Log($"Generated API documentation at {pathInAssets}.");
 		}
 
 		private void AppendInstruction(StringBuilder stringBuilder, string instructionName, MethodInfo methodInfo)
