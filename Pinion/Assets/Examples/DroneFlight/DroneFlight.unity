@@ -246,7 +246,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d68f2f8ececf0714c878fab6c6a2aaa4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  testText: {fileID: 4900000, guid: 691f42db2a41b7f40ab414d033a60591, type: 3}
+  testText: {fileID: 4900000, guid: f22c9f736b18f32449eb30123eb67b88, type: 3}
   errorDisplay: {fileID: 1994130989}
 --- !u!4 &587483411
 Transform:
@@ -269,6 +269,11 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 5386806347362673660, guid: 7d2463cedc354804597f05df54b4971a,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -59.99994
+      objectReference: {fileID: 0}
     - target: {fileID: 5386806347553524843, guid: 7d2463cedc354804597f05df54b4971a,
         type: 3}
       propertyPath: m_Name
