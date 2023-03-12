@@ -1,0 +1,16 @@
+{
+    "name": "kasper-adriaensen.pinion.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:415b2db8e088e2f4c818984459342da6"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -7,7 +7,7 @@ using Pinion.ContainerMemory;
 
 namespace Pinion
 {
-	public partial class PinionContainer
+	public class PinionContainer
 	{
 		#region Fields
 		// We don't define a "ran to completion" flag because what that  means exactly could depend a lot

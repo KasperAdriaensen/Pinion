@@ -11,11 +11,11 @@ namespace Pinion.Editor
 	public class PinionTextAssetFieldDrawer : PropertyDrawer
 	{
 		private const float lineMargin = 3f;
-		private const float lineHeight = 20f;
+		private const float lineHeight = 22f;
 		private const float lineHeightWithMargin = lineHeight + lineMargin;
 
 		private List<string> errorMessages = new List<string>();
-		private float calculatedHeight = lineHeight;
+		private float calculatedHeight = (lineHeight * 2) + lineMargin;
 		private bool compiledOnce = false;
 
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -59,16 +59,19 @@ namespace Pinion.Editor
 			for (int i = 0; i < errorMessages.Count; i++)
 			{
 				string errorMessage = errorMessages[i];
-				Rect messageRect = new Rect(position.x, yPos, position.width, lineHeight);
+				float height = PinionTextFieldDrawer.GetWarningHeight(errorMessage, position.width);
+				Rect messageRect = new Rect(position.x, yPos, position.width, height);
 				EditorGUI.HelpBox(messageRect, errorMessage, MessageType.Error);
-				yPos += lineHeightWithMargin;
+				yPos += height + lineMargin;
 			}
 
 			if (compiledOnce && errorMessages.Count <= 0)
 			{
-				Rect messageRect = new Rect(position.x, yPos, position.width, lineHeight);
-				EditorGUI.HelpBox(messageRect, "Compiled successfully.", MessageType.Info);
-				yPos += lineHeightWithMargin;
+				string message = "Compiled successfully.";
+				float height = PinionTextFieldDrawer.GetWarningHeight(message, position.width);
+				Rect messageRect = new Rect(position.x, yPos, position.width, height);
+				EditorGUI.HelpBox(messageRect, message, MessageType.Info);
+				yPos += height + lineMargin;
 			}
 
 			calculatedHeight = yPos - yPosOriginal;

@@ -11,11 +11,12 @@ namespace Pinion.Editor
 	public class PinionTextFieldDrawer : PropertyDrawer
 	{
 		private const float lineMargin = 3f;
-		private const float lineHeight = 20f;
+		private const float lineHeight = 22f;
 		private const float lineHeightWithMargin = lineHeight + lineMargin;
+		private const float maxTextFieldHeight = 300;
 
 		private List<string> errorMessages = new List<string>();
-		private float calculatedHeight = lineHeight;
+		private float calculatedHeight = (lineHeight * 2) + lineMargin;
 		private bool compiledOnce = false;
 
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -32,18 +33,17 @@ namespace Pinion.Editor
 				return;
 			}
 
-			property.isExpanded = EditorGUI.Foldout(new Rect(position.x, yPos, position.width, lineHeight), property.isExpanded, property.name);
-			yPos += lineHeightWithMargin;
+			// property.isExpanded = EditorGUI.Foldout(new Rect(position.x, yPos, position.width, lineHeight), property.isExpanded, property.name);
+			// yPos += lineHeightWithMargin;
 
-			if (!property.isExpanded)
-			{
-				calculatedHeight = yPos - yPosOriginal;
-				return;
-			}
+			// only way to reliably get predicted size of a text area with text wrapping
+			float calculatedTextFieldHeight = EditorStyles.textArea.CalcHeight(new GUIContent(property.stringValue), position.width);
+			calculatedTextFieldHeight = Math.Min(maxTextFieldHeight, calculatedTextFieldHeight);
+			//calculatedTextFieldHeight = maxTextFieldHeight;
 
-			Rect textFieldSize = new Rect(position.x, yPos, position.width, 200);
-			property.stringValue = EditorGUI.TextArea(textFieldSize, property.stringValue);
-			yPos += textFieldSize.height + lineMargin;
+			Rect textFieldRect = new Rect(position.x, yPos, position.width, calculatedTextFieldHeight);
+			property.stringValue = EditorGUI.TextArea(textFieldRect, property.stringValue);
+			yPos += calculatedTextFieldHeight + lineMargin;
 
 			if (GUI.Button(new Rect(position.x, yPos, position.width, lineHeight), "Compile"))
 			{
@@ -55,16 +55,19 @@ namespace Pinion.Editor
 			for (int i = 0; i < errorMessages.Count; i++)
 			{
 				string errorMessage = errorMessages[i];
-				Rect messageRect = new Rect(position.x, yPos, position.width, lineHeight);
+				float height = GetWarningHeight(errorMessage, position.width);
+				Rect messageRect = new Rect(position.x, yPos, position.width, height);
 				EditorGUI.HelpBox(messageRect, errorMessage, MessageType.Error);
-				yPos += lineHeightWithMargin;
+				yPos += height + lineMargin;
 			}
 
 			if (compiledOnce && errorMessages.Count <= 0)
 			{
-				Rect messageRect = new Rect(position.x, yPos, position.width, lineHeight);
-				EditorGUI.HelpBox(messageRect, "Compiled successfully.", MessageType.Info);
-				yPos += lineHeightWithMargin;
+				string message = "Compiled successfully.";
+				float height = GetWarningHeight(message, position.width);
+				Rect messageRect = new Rect(position.x, yPos, position.width, height);
+				EditorGUI.HelpBox(messageRect, message, MessageType.Info);
+				yPos += height + lineMargin;
 			}
 
 			calculatedHeight = yPos - yPosOriginal;
@@ -89,6 +92,10 @@ namespace Pinion.Editor
 			errorMessages.Add(errorMessage);
 		}
 
+		public static float GetWarningHeight(string text, float width)
+		{
+			return EditorStyles.helpBox.CalcHeight(new GUIContent(text), width);
+		}
 	}
 }
 
