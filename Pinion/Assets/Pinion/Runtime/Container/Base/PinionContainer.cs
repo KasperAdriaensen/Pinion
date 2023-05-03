@@ -220,7 +220,7 @@ namespace Pinion
 		{
 			if (index < 0)
 			{
-				Debug.LogError($"[PinionContainer] Invalid index for next instruction! Index must be >= 0.");
+				Debug.LogError($"[PinionContainer] Invalid index ({index}) for next instruction! Index must be >= 0.");
 				return;
 			}
 

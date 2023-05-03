@@ -107,12 +107,10 @@ namespace Pinion.Compiler
 
 			if (compileSuccess)
 			{
-				Debug.Log("Compilation succesful. ================================");
 				return newContainer;
 			}
 			else
 			{
-				Debug.Log("Compilation failed. ================================");
 				return null;
 			}
 		}

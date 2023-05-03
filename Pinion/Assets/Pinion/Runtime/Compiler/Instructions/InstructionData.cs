@@ -108,6 +108,8 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 				if (PinionTypes.IsSupportedPublicType(parameterType)) // No further checks required.
 					continue;
 
+				// PinionContainer can be passed, but only as first argument.
+				// It will not be shown in the user-facing instruction signature.
 				if (IsTypeOrSubtype(parameterType, typeof(PinionContainer)))
 				{
 					if (i > 0)
@@ -117,7 +119,7 @@ Multiple candidates found. Any static methods named '{identifier}', declared wit
 				}
 				else
 				{
-					throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: unsupported parameter type at parameter index {i}.");
+					throw new PinionAPIException($"Method {methodInfo.Name} in {methodInfo.DeclaringType}: unsupported parameter type ({parameterType}) at parameter index {i}.");
 				}
 			}
 
