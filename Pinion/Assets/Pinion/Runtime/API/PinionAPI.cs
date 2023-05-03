@@ -259,8 +259,8 @@ namespace Pinion
 			{
 				// This could be expanded or made less restrictive if need be.
 				// For our current purposes however, this is perfectly fine. Saves iterating over a whole bunch of types that couldn't possibly have our own custom attribute anyway.
-				if (assembly.GetName().Name != "Assembly-CSharp")
-					continue;
+				// if (assembly.GetName().Name != "Assembly-CSharp")
+				// 	continue;
 
 				foreach (Type type in assembly.GetTypes())
 				{
