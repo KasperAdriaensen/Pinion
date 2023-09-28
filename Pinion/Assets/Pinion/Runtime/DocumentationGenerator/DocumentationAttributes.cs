@@ -28,7 +28,10 @@ namespace Pinion.Documentation
 
 		}
 	}
+}
 
+namespace Pinion.Documentation.Internal
+{
 	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
 	public class DocMethodOperatorReplaceAttribute : System.Attribute
 	{

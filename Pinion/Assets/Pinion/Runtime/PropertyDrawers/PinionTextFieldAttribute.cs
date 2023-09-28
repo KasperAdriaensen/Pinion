@@ -4,7 +4,7 @@ namespace Pinion
 	using UnityEngine;
 
 	[System.AttributeUsage(System.AttributeTargets.All, Inherited = false, AllowMultiple = false)]
-	public sealed class DrawPinionTextFieldAttribute : PropertyAttribute
+	public sealed class PinionTextFieldAttribute : PropertyAttribute
 	{
 		public Type ContainerType
 		{
@@ -13,11 +13,11 @@ namespace Pinion
 
 		private readonly Type containerType = null;
 
-		public DrawPinionTextFieldAttribute() : this(typeof(PinionContainer))
+		public PinionTextFieldAttribute() : this(typeof(PinionContainer))
 		{
 		}
 
-		public DrawPinionTextFieldAttribute(Type containerType)
+		public PinionTextFieldAttribute(Type containerType)
 		{
 			this.containerType = containerType;
 
