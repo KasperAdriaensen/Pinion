@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Pinion.Compiler.Internal;
+using Pinion.Internal;
 using UnityEngine;
 
 namespace Pinion.Compiler
@@ -74,16 +75,23 @@ namespace Pinion.Compiler
 				externalVariableName = variableName;
 
 				//TODO: This should be passed in a much better way.
-				if (PinionCompiler.CurrentBlockContext != ScriptBlock.InitBlock)
+				if (PinionCompiler.currentBlockContext != ScriptBlock.InitBlock)
 				{
 					AddCompileError($"External variables can only be declared in an {ScriptBlock.InitBlock}.");
+					return;
+				}
+
+				//TODO: This should be passed in a much better way.
+				if (!string.IsNullOrEmpty(valueExpression))
+				{
+					AddCompileError($"External variables cannot have a initial value defined, since that value is provided by the container.");
 					return;
 				}
 			}
 
 			if (!IsValidVariableName(variableName))
 			{
-				AddCompileError($"Invalid variable name: {variableName}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
+				AddCompileError($"Invalid variable name: {variableName}. Name must prefixed with $ or $$ (for external variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
 				return;
 			}
 
@@ -104,7 +112,7 @@ namespace Pinion.Compiler
 
 				if (string.IsNullOrEmpty(valueExpression))
 				{
-					AddCompileError("Array declaration requires a third argument: either an array size (e.g. 'set(string[], $myArray, 2)') or an initializer (e.g. 'set(string[], $myArray, {\"hello\", \"world\"})').");
+					AddCompileError("Array declaration requires a third argument: an int literal for array size (e.g. 'declare(string[], $myArray, 2)') or an initializer (e.g. 'declare(string[], $myArray, {\"hello\", \"world\"})').");
 					return;
 				}
 
@@ -126,7 +134,7 @@ namespace Pinion.Compiler
 				}
 				else
 				{
-					AddCompileError("Could not interpret third argument for array declaration. Must be either an array size (e.g. 'set(string[], $myArray, 2)') or an initializer (e.g. 'set(string[], $myArray, {\"hello\", \"world\"})').");
+					AddCompileError("Could not interpret third argument for array declaration. It must be an int literal for array size (e.g. 'declare(string[], $myArray, 2)') or an initializer (e.g. 'declare(string[], $myArray, {\"hello\", \"world\"})').");
 					return;
 				}
 			}
@@ -362,7 +370,7 @@ namespace Pinion.Compiler
 
 			if (!IsValidVariableName(variableString))
 			{
-				AddCompileError($"Invalid variable name: {variableString}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
+				AddCompileError($"Invalid variable name: {variableString}. Name must prefixed with $ or $$ (for external variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
 				return CompilerArgument.Invalid;
 			}
 
@@ -374,17 +382,35 @@ namespace Pinion.Compiler
 
 			IVariablePointer pointer = variableNameToPointerMappings[variableString];
 
-			if (accessingArray)
+			if (!pointer.IsArray)
 			{
-				if (!pointer.IsArray)
+				// If we're accessing something that's not an array through an array index...
+				if (accessingArray)
 				{
 					AddCompileError($"Variable {variableString} is not an array.");
 					return CompilerArgument.Invalid;
 				}
 			}
+			else
+			{
+				// If we're accessing something that IS an array without an array index...
+				// We interpret this as implicitly accessing [0].
+				// To do this, we need to push 0 to the stack before running the read instruction.
+				// We have a stupid dummy method for that.
+				// We could have forced always using an array index.
+				// But doing this allows us to do  GetLength($someArray) without having to specify an index.
+				// Basically it just makes it so the int stack (where the offset is read from) is not empty when GetLength is called.
+				if (!accessingArray)
+				{
+					output.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.ArrayZeroOffset).instructionCode);
+				}
+			}
 
 			output.Add(pointer.GetReadInstruction().instructionCode);
 			output.Add(pointer.GetIndexInRegister());
+
+
+
 
 #if UNITY_EDITOR && PINION_COMPILE_DEBUG
 			Debug.Log($"[PinionCompiler] Parsed variable read: variable {variableString} of type {pointer.GetValueType().ToString()}.");
@@ -449,7 +475,7 @@ namespace Pinion.Compiler
 
 			if (!IsValidVariableName(variableToken))
 			{
-				AddCompileError($"Invalid variable name: {variableToken}. Name must prefixed with $ or $$ (for system variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
+				AddCompileError($"Invalid variable name: {variableToken}. Name must prefixed with $ or $$ (for external variables). Variable name must start with a letter, followed by any amount of alphanumeric characters.");
 				return;
 			}
 
@@ -463,7 +489,10 @@ namespace Pinion.Compiler
 			CompilerArgument returnValue = ParseExpression(targetContainer, valueExpression);
 
 			if (!compileSuccess) // if valueExpression could not be parsed, compilation will already have failed with a (hopefully) meaningful message
+			{
+				AddCompileError($"Could not parse variable assignment: {valueExpression}");
 				return;
+			}
 
 			System.Type expectedType = pointer.GetValueType();
 			if (returnValue.argumentType != expectedType) // return is null or something other than expectedType

@@ -47,7 +47,6 @@ namespace Pinion.Compiler.Internal
 			{typeof(string), PinionAPIInternalIDs.WriteStringArray},
 		};
 
-
 		private static string GetReadInstructionIdentifier<U>()
 		{
 			System.Type type = typeof(T);

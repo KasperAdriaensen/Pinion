@@ -1,6 +1,7 @@
 namespace Pinion
 {
 	using Pinion.Documentation;
+	using Pinion.Documentation.Internal;
 
 	[APISource]
 	[DocSourceDisplayName("Boolean logic")]

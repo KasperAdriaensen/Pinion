@@ -28,13 +28,13 @@ namespace Pinion
 			set { executionTimeoutMsCustom = value; }
 		}
 
-		public int CurrentInstructionIndex
+		private int CurrentInstructionIndex
 		{
 			get { return currentInstructionIndex; }
 			// do not clamp here - under certain conditions settings this to -1 can be desirable 
 			// (e.g. execute command index 0 as next command)
 			// a number >= scriptInstructions.Length will just terminate the execution loop
-			private set { currentInstructionIndex = value; }
+			set { currentInstructionIndex = value; }
 		}
 
 		public InternalState StateFlags
@@ -43,7 +43,7 @@ namespace Pinion
 		}
 
 		public int mainBlockStartIndex = 0; // TODO Don't like this being a public value. It should not be altered outside of compilation.
-		public List<ushort> scriptInstructions = new List<ushort>();    // TODO This should probably not be editable.
+		public List<ushort> scriptInstructions = new List<ushort>();    // TODO This should not be editable but hard to avoid.
 		public ContainerMemoryRegister<int> IntRegister { get { return intRegister; } }
 		public ContainerMemoryRegister<float> FloatRegister { get { return floatRegister; } }
 		public ContainerMemoryRegister<string> StringRegister { get { return stringRegister; } }
@@ -128,6 +128,8 @@ namespace Pinion
 
 			executeStopwatch.Stop();
 
+			// If we reach the end of the instruction list, we have stopped executing,
+			// unless we just got here because Sleep() was encountered.
 			if (!HasStateFlag(InternalState.Sleeping))
 				RemoveStateFlag(InternalState.Executing);
 		}
@@ -250,10 +252,17 @@ namespace Pinion
 		}
 		#endregion
 		#region ExecutionControl
-		public virtual void Stop()
+		public void Stop()
 		{
 			forceStop = true;
-			RemoveStateFlag(InternalState.Initialized);
+			// This would have been inconsistent - reaching the end of the instruction list does not
+			// reset Initialized, but calling Stop() does.
+			// RemoveStateFlag(InternalState.Initialized); 
+			OnStop();
+		}
+
+		protected virtual void OnStop()
+		{
 		}
 
 		public void Sleep()
@@ -272,11 +281,7 @@ namespace Pinion
 		}
 		#endregion
 		#region Blocks
-		public void OnInitBegin()
-		{
-		}
-
-		public void OnInitEnd()
+		public void BeginInit()
 		{
 			if (externalVariables == null)
 				return;
@@ -286,6 +291,11 @@ namespace Pinion
 			intRegister.StoreExternalVariables(externalVariables);
 			floatRegister.StoreExternalVariables(externalVariables);
 			stringRegister.StoreExternalVariables(externalVariables);
+			boolRegister.StoreExternalVariables(externalVariables);
+		}
+
+		public void EndInit()
+		{
 		}
 
 		public virtual void ParseMetaData(string metaData, System.Action<string> errorMessageReceiver)

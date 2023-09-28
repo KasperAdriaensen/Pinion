@@ -33,5 +33,7 @@ namespace Pinion.Internal
 		public const string IncrementFloatVariablePrefix = "InternalIncrementFloatVariablePrefix";
 		public const string IncrementIntVariablePostfix = "InternalIncrementIntVariablePostfix";
 		public const string IncrementFloatVariablePostfix = "InternalIncrementFloatVariablePostfix";
+
+		public const string ArrayZeroOffset = "ArrayZeroOffset";
 	}
 }
