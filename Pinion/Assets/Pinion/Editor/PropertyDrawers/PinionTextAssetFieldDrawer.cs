@@ -7,7 +7,7 @@ namespace Pinion.Editor
 	using System.Collections.Generic;
 	using System;
 
-	[CustomPropertyDrawer(typeof(DrawPinionTextAssetFieldAttribute))]
+	[CustomPropertyDrawer(typeof(PinionTextAssetFieldAttribute))]
 	public class PinionTextAssetFieldDrawer : PropertyDrawer
 	{
 		private const float lineMargin = 3f;
@@ -84,7 +84,7 @@ namespace Pinion.Editor
 
 		private void CompileString(string script)
 		{
-			DrawPinionTextAssetFieldAttribute textFieldAttribute = attribute as DrawPinionTextAssetFieldAttribute;
+			PinionTextAssetFieldAttribute textFieldAttribute = attribute as PinionTextAssetFieldAttribute;
 			Type targetType = textFieldAttribute.ContainerType;
 			compiledOnce = true;
 			errorMessages.Clear();
