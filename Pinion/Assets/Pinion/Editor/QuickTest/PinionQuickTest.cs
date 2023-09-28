@@ -28,6 +28,7 @@ public class PinionQuickTest : EditorWindow
 	// complicates things to much to do it any other way.
 	private List<Type> containerTypes = new List<Type>();
 	private string[] containerTypeNames = null;
+	private bool uncompiledChanges = false;
 
 	[MenuItem("Window/Pinion/Pinion Quick Test")]
 	private static void ShowWindow()
@@ -44,15 +45,22 @@ public class PinionQuickTest : EditorWindow
 
 	private void OnGUI()
 	{
-		selectedContainerType = EditorGUILayout.Popup(selectedContainerType, containerTypeNames);
+		selectedContainerType = EditorGUILayout.Popup("Target container type", selectedContainerType, containerTypeNames);
 
 		GUILayout.Label("Enter Pinion code or TextAsset.");
 		GUILayout.BeginHorizontal();
+
+		EditorGUI.BeginChangeCheck();
 		scriptTextAsset = (TextAsset)EditorGUILayout.ObjectField(scriptTextAsset, typeof(TextAsset), false);
 		if (scriptTextAsset && GUILayout.Button("Clear", GUILayout.Width(50)))
 		{
 			scriptTextAsset = null;
 		}
+		if (EditorGUI.EndChangeCheck())
+		{
+			uncompiledChanges = true;
+		}
+
 		GUILayout.EndHorizontal();
 
 		if (scriptTextAsset != null)
@@ -64,8 +72,24 @@ public class PinionQuickTest : EditorWindow
 		}
 		else
 		{
+			EditorGUI.BeginChangeCheck();
 			textInput = EditorGUILayout.TextArea(textInput, GUILayout.MinHeight(300));
 			stringToCompile = textInput;
+			if (EditorGUI.EndChangeCheck())
+			{
+				uncompiledChanges = true;
+			}
+		}
+
+		if (uncompiledChanges)
+		{
+			GUILayout.Label("Uncompiled changes", EditorStyles.miniLabel);
+		}
+		else
+		{
+			// Stupid hack to make the rest of the UI not jump around when there are no more uncompiled changes.
+			// string.Empty will still jump a little.
+			GUILayout.Label(" ", EditorStyles.miniLabel);
 		}
 
 		GUILayout.Space(20f);
@@ -127,17 +151,24 @@ public class PinionQuickTest : EditorWindow
 		}
 		GUI.enabled = true;
 
-
 		if (GUILayout.Button("Compile"))
 		{
 			Compile();
 		}
 
-		if (GUILayout.Button("Compile & Execute"))
+		GUI.enabled = compileResult != null;
+		if (GUILayout.Button("Run"))
+		{
+			Run();
+		}
+		GUI.enabled = true;
+
+		if (GUILayout.Button("Compile & Run"))
 		{
 			Compile();
 			Run();
 		}
+
 
 		foreach ((MessageType, string) message in messages)
 		{
@@ -170,6 +201,8 @@ public class PinionQuickTest : EditorWindow
 		{
 			messages.Add((MessageType.Info, "Compiled successfully."));
 		}
+
+		uncompiledChanges = false;
 	}
 
 	private void Run()
