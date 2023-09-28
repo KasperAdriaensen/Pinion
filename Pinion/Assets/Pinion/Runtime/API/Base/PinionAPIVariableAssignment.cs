@@ -3,6 +3,7 @@ namespace Pinion
 	using System.Collections.Generic;
 	using Pinion.Compiler.Internal;
 	using Pinion.Documentation;
+	using Pinion.Documentation.Internal;
 
 	[APISource]
 	[DocSourceDisplayName("Variable assignment")]
@@ -19,7 +20,7 @@ namespace Pinion
 			// We can be reasonably sure there are exactly two arguments of the right type.
 			CompilerArgument targetVariable = providedArguments[0];
 
-			// Disallow using increment/decrement operator with anything but variables. To do otherwise is pointless anyway.
+			// Disallow using assign operator with anything but variables. To do otherwise is pointless anyway.
 			if (targetVariable.argumentSource != CompilerArgument.ArgSource.Variable)
 			{
 				compileErrorHandler(messageAssignVariableOnly);

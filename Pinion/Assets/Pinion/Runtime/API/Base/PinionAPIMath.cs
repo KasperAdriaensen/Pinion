@@ -3,6 +3,7 @@ namespace Pinion
 	using System.Collections.Generic;
 	using UnityEngine;
 	using Pinion.Documentation;
+	using Pinion.Documentation.Internal;
 	using Pinion.Compiler.Internal;
 
 	[APISource]
@@ -171,7 +172,7 @@ namespace Pinion
 
 		/// Returns the negation of $0.
 		[APIMethod]
-		[DocMethodHide()]
+		[DocMethodHide]
 		public static float Negate(float number)
 		{
 			return -number;
@@ -179,7 +180,7 @@ namespace Pinion
 
 		/// Returns the negation of $0.
 		[APIMethod]
-		[DocMethodHide()]
+		[DocMethodHide]
 		public static int Negate(int number)
 		{
 			return -number;
@@ -197,6 +198,153 @@ namespace Pinion
 		public static int Absolute(int number)
 		{
 			return Mathf.Abs(number);
+		}
+
+		/// Rounds $0 to the nearest integer. Returns it as a float.
+		[APIMethod]
+		public static float Round(float number)
+		{
+			return Mathf.Round(number);
+		}
+
+		/// Rounds $0 to the nearest integer. Returns it as an int.
+		[APIMethod]
+		public static int RoundToInt(float number)
+		{
+			return Mathf.RoundToInt(number);
+		}
+
+		/// Returns the least integer greater than or equal to $0.
+		[APIMethod]
+		public static float Ceil(float number)
+		{
+			return Mathf.Ceil(number);
+		}
+
+		/// Returns the least integer greater than or equal to $0. Returns it as an int.
+		[APIMethod]
+		public static int CeilToInt(float number)
+		{
+			return Mathf.CeilToInt(number);
+		}
+
+		/// Returns the largest integer smaller than or equal to $0.
+		[APIMethod]
+		public static float Floor(float number)
+		{
+			return Mathf.Floor(number);
+		}
+
+		/// Returns the largest integer smaller than or equal to $0. Returns it as an int.
+		[APIMethod]
+		public static int FloorToInt(float number)
+		{
+			return Mathf.FloorToInt(number);
+		}
+
+		/// Returns a value linearly interpolated between $0 and $1 with $2 as (0-1) interpolation value.
+		[APIMethod]
+		public static float Lerp(float from, float to, float t)
+		{
+			return Mathf.Lerp(from, to, t);
+		}
+
+		/// Returns a value linearly interpolated between $0 and $1 with $2 as interpolation value. $2 can be outside the 0-1 range to extrapolate.
+		[APIMethod]
+		public static float LerpUnclamped(float a, float b, float t)
+		{
+			return Mathf.LerpUnclamped(a, b, t);
+		}
+
+		/// Returns $0, clamped between minimum $1 and maximum $2.
+		[APIMethod]
+		public static int Clamp(int value, int min, int max)
+		{
+			return Mathf.Clamp(value, min, max);
+		}
+
+		/// Returns $0, clamped between minimum $1 and maximum $2.
+		[APIMethod]
+		public static float Clamp(float value, float min, float max)
+		{
+			return Mathf.Clamp(value, min, max);
+		}
+
+		/// Returns the largest of either $0 or $1
+		[APIMethod]
+		public static float Max(float a, float b)
+		{
+			return Mathf.Max(a, b);
+		}
+
+		/// Returns the largest of either $0 or $1
+		[APIMethod]
+		public static int Max(int a, int b)
+		{
+			return Mathf.Max(a, b);
+		}
+
+		/// Returns the smallest of either $0 or $1
+		[APIMethod]
+		public static float Min(float a, float b)
+		{
+			return Mathf.Min(a, b);
+		}
+
+		/// Returns the smallest of either $0 or $1
+		[APIMethod]
+		public static int Min(int a, int b)
+		{
+			return Mathf.Min(a, b);
+		}
+
+		/// Returns Everyone's favorite irrational number. 3.14 something-something.
+		[APIMethod]
+		public static float Pi()
+		{
+			return Mathf.PI;
+		}
+
+		/// Returns $0 raised to the power $1.
+		[APIMethod]
+		public static float Pow(float number, float power)
+		{
+			return Mathf.Pow(number, power);
+		}
+
+		/// Returns the square root of $0.
+		[APIMethod]
+		public static float Sqrt(float number)
+		{
+			return Mathf.Sqrt(number);
+		}
+
+		/// Returns the sine of $0.
+		[APIMethod]
+		public static float Sin(float angleInRadians)
+		{
+			return Mathf.Sin(angleInRadians);
+		}
+
+		/// Returns the cosine of $0.
+		[APIMethod]
+		public static float Cos(float angleInRadians)
+		{
+			return Mathf.Cos(angleInRadians);
+		}
+
+		/// Returns the tangent of $0.
+		[APIMethod]
+		public static float Tan(float angleInRadians)
+		{
+			return Mathf.Tan(angleInRadians);
+		}
+
+		/// Returns $0 moved towards $1 in a step no bigger than $2. 
+		[APIMethod]
+		public static float MoveTowards(float current, float target, float maxStep)
+		{
+			return Mathf.MoveTowards(current, target, maxStep);
 		}
 	}
 }

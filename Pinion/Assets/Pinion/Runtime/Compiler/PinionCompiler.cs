@@ -11,7 +11,7 @@ namespace Pinion.Compiler
 	{
 		private static bool apiBuiltSuccesfully = true;
 
-		public enum ScriptBlock
+		private enum ScriptBlock
 		{
 			None = 0,
 			InitBlock = 1,
@@ -20,16 +20,12 @@ namespace Pinion.Compiler
 			MetaBlock = 4
 		}
 
-		public static ScriptBlock CurrentBlockContext
-		{
-			get; private set;
-		}
-
 		private static System.Action<string> compileErrorCallback = null;
 		private static bool compileSuccess = true;
 		private static int currentLineNumber = -1; // 0 while not compiling - actual line numbers start at 1
 		private static Regex variableDeclareRegex = new Regex(CompilerRegex.variableDeclareRegex, RegexOptions.Compiled);
 		private static Regex variableWriteRegex = new Regex(CompilerRegex.variableWriteRegex, RegexOptions.Compiled);
+		private static ScriptBlock currentBlockContext = ScriptBlock.None;
 
 		static PinionCompiler()
 		{
@@ -81,7 +77,6 @@ namespace Pinion.Compiler
 
 			// Meta block contains free-form information. If present, it is passed to the script container of type T.
 			// Type T is free to decide how to use this data (e.g. parse it for initialization).
-			// Beyond this point, meta block has been removed from the script.
 			string metaBlock = ReadMetaBlock(script);
 
 			if (!compileSuccess) // Parsing meta block could spawn an error. Don't bother beyond this point.
@@ -102,7 +97,7 @@ namespace Pinion.Compiler
 			}
 
 			compileErrorCallback = null;
-			CurrentBlockContext = ScriptBlock.None;
+			currentBlockContext = ScriptBlock.None;
 			newContainer.GenerateStackWrappers();
 
 			if (compileSuccess)
@@ -175,7 +170,7 @@ namespace Pinion.Compiler
 			if (!compileSuccess) // malformed flow control above could be enough to break compilation
 				return;
 
-			CurrentBlockContext = ScriptBlock.None;
+			currentBlockContext = ScriptBlock.None;
 			bool initBlockPresent = false;
 			bool mainBlockPresent = false;
 			bool metaBlockPresent = false;
@@ -209,8 +204,8 @@ namespace Pinion.Compiler
 
 					if (line == CompilerConstants.MetaBeginMarker)
 					{
-						if (CurrentBlockContext != ScriptBlock.None)
-							AddCompileError($"Cannot use {CompilerConstants.MetaBeginMarker} inside {CurrentBlockContext}.");
+						if (currentBlockContext != ScriptBlock.None)
+							AddCompileError($"Cannot use {CompilerConstants.MetaBeginMarker} inside {currentBlockContext}.");
 
 						if (metaBlockPresent)
 							AddCompileError($"Cannot have more than one {ScriptBlock.MetaBlock}.");
@@ -218,22 +213,22 @@ namespace Pinion.Compiler
 							AddCompileError($"{CompilerConstants.MetaBeginMarker} must be at the start of the script. It cannot occur in any other context.");
 
 						metaBlockPresent = true;
-						CurrentBlockContext = ScriptBlock.MetaBlock;
+						currentBlockContext = ScriptBlock.MetaBlock;
 						continue;
 					}
 					else if (line == CompilerConstants.MetaEndMarker)
 					{
-						if (CurrentBlockContext != ScriptBlock.MetaBlock)
-							AddCompileError($"Cannot use {CompilerConstants.MetaEndMarker} inside {CurrentBlockContext}.");
+						if (currentBlockContext != ScriptBlock.MetaBlock)
+							AddCompileError($"Cannot use {CompilerConstants.MetaEndMarker} inside {currentBlockContext}.");
 
-						CurrentBlockContext = ScriptBlock.None;
+						currentBlockContext = ScriptBlock.None;
 						continue;
 					}
 
 					if (line == CompilerConstants.InitBeginMarker)
 					{
-						if (CurrentBlockContext != ScriptBlock.None)
-							AddCompileError($"Cannot use {CompilerConstants.InitBeginMarker} inside {CurrentBlockContext}.");
+						if (currentBlockContext != ScriptBlock.None)
+							AddCompileError($"Cannot use {CompilerConstants.InitBeginMarker} inside {currentBlockContext}.");
 
 						if (initBlockPresent)
 							AddCompileError($"Cannot have more than one {ScriptBlock.InitBlock}.");
@@ -244,7 +239,7 @@ namespace Pinion.Compiler
 							AddCompileError($"Cannot start an {ScriptBlock.InitBlock} when there is an implicit {ScriptBlock.MainBlock} (code outside any block).");
 
 						initBlockPresent = true;
-						CurrentBlockContext = ScriptBlock.InitBlock;
+						currentBlockContext = ScriptBlock.InitBlock;
 
 						// Event that enables calling custom logic on the script container on init start.
 						targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.InitBegin).instructionCode);
@@ -252,10 +247,10 @@ namespace Pinion.Compiler
 					}
 					else if (line == CompilerConstants.InitEndMarker)
 					{
-						if (CurrentBlockContext != ScriptBlock.InitBlock)
-							AddCompileError($"Cannot use {CompilerConstants.InitEndMarker} inside {CurrentBlockContext}.");
+						if (currentBlockContext != ScriptBlock.InitBlock)
+							AddCompileError($"Cannot use {CompilerConstants.InitEndMarker} inside {currentBlockContext}.");
 
-						CurrentBlockContext = ScriptBlock.None;
+						currentBlockContext = ScriptBlock.None;
 
 						// Event that enables calling custom logic on the script container on init end.
 						targetContainer.scriptInstructions.Add(PinionAPI.GetInternalInstructionByID(PinionAPIInternalIDs.InitEnd).instructionCode);
@@ -264,8 +259,8 @@ namespace Pinion.Compiler
 
 					if (line == CompilerConstants.MainBeginMarker)
 					{
-						if (CurrentBlockContext != ScriptBlock.None)
-							AddCompileError($"Cannot use {CompilerConstants.MainBeginMarker} inside {CurrentBlockContext}.");
+						if (currentBlockContext != ScriptBlock.None)
+							AddCompileError($"Cannot use {CompilerConstants.MainBeginMarker} inside {currentBlockContext}.");
 
 						if (mainBlockPresent)
 							AddCompileError($"Cannot have more than one {ScriptBlock.MainBlock}.");
@@ -274,16 +269,16 @@ namespace Pinion.Compiler
 							AddCompileError($"Cannot start a {ScriptBlock.MainBlock} when there is an implicit {ScriptBlock.MainBlock} (code outside any block).");
 
 						mainBlockPresent = true;
-						CurrentBlockContext = ScriptBlock.MainBlock;
+						currentBlockContext = ScriptBlock.MainBlock;
 						targetContainer.mainBlockStartIndex = targetContainer.scriptInstructions.Count;
 						continue;
 					}
 					else if (line == CompilerConstants.MainEndMarker)
 					{
-						if (CurrentBlockContext != ScriptBlock.MainBlock)
-							AddCompileError($"Cannot use {CompilerConstants.InitEndMarker} inside {CurrentBlockContext}.");
+						if (currentBlockContext != ScriptBlock.MainBlock)
+							AddCompileError($"Cannot use {CompilerConstants.InitEndMarker} inside {currentBlockContext}.");
 
-						CurrentBlockContext = ScriptBlock.None;
+						currentBlockContext = ScriptBlock.None;
 						continue;
 					}
 
@@ -310,7 +305,7 @@ namespace Pinion.Compiler
 					// NOTE: meta block is not counted for this: it's "invisible" to itself and other blocks.
 					blocksPresent = initBlockPresent || mainBlockPresent;
 
-					switch (CurrentBlockContext)
+					switch (currentBlockContext)
 					{
 						case ScriptBlock.MainBlock:
 							ParseLineForMain(targetContainer, line);
@@ -347,8 +342,8 @@ namespace Pinion.Compiler
 
 			if (compileSuccess) // Some final checks if everything else succeeded.
 			{
-				if (CurrentBlockContext != ScriptBlock.None)
-					AddCompileError($"Block {CurrentBlockContext} was opened, but never closed.");
+				if (currentBlockContext != ScriptBlock.None)
+					AddCompileError($"Block {currentBlockContext} was opened, but never closed.");
 
 				if (initBlockPresent && !mainBlockPresent)
 					AddCompileError($"A main block was not defined, but other blocks were. An implicit main block is only allowed if there are no other blocks, except for a meta block.");
@@ -461,9 +456,9 @@ namespace Pinion.Compiler
 
 		private static void AddCompileErrorNoLineNumber(string message)
 		{
-			// TODO: Placeholder function for error handling. Handy for hooking up events, etc.
-			// 9f0000 reads better on Unity background than standard red.
-#if UNITY_EDITOR
+			// Defined from PinionSettings
+
+#if PINION_LOG_COMPILE_ERRORS_ALWAYS || (PINION_LOG_COMPILE_ERRORS_EDITOR && UNITY_EDITOR)
 			Debug.LogError($"[PinionCompiler] Compile error: {message}");
 #endif
 

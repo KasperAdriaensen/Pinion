@@ -1,6 +1,8 @@
 ﻿namespace Pinion
 {
 	using Pinion.Documentation;
+	using Pinion.Documentation.Internal;
+	using UnityEngine;
 
 	[APISource]
 	[DocSourceDisplayName("Equality")]
@@ -116,6 +118,13 @@
 		public static bool NotEquals(string valueA, string valueB)
 		{
 			return valueA != valueB;
+		}
+
+		/// Returns whether $0 and $1 are close enough to be considered the same in the context of floating-point inaccuracy.
+		[APIMethod]
+		public static bool ApproxEquals(float valueA, float valueB)
+		{
+			return Mathf.Approximately(valueA, valueB);
 		}
 	}
 }

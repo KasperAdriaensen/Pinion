@@ -73,7 +73,7 @@ namespace Pinion.Compiler.Internal
 		// couldn't access each other's internal state, e.g. to check the current innermost loop type.
 		// In hindsight, separate IRewriteHandlers didn't really accomplish much: both the amount of string compares and memory used are gonna be about the same.
 		// So, while it may seem less "clean", merging these rewrites in a single, more complex method actually made sense.
-		// Besides, the amount of flow control techniques is pretty limited and hasn't changed much in decaces, so all in all, there's
+		// Besides, the amount of flow control techniques is pretty limited and hasn't changed much in decades, so all in all, there's
 		// not much to be gained from a "flexible" list of rewrite handlers.
 		public static string RewriteFlow(string input, System.Action<string, int> errorMessageHandler)
 		{
@@ -292,7 +292,7 @@ namespace Pinion.Compiler.Internal
 				if (string.IsNullOrEmpty(condition))
 					errorsEncountered.Add(($"Empty if-statement.'", lineNumber));
 
-				outputLine = BuildIf(match.Groups[1].Value, ConditionalKeyword.@if);
+				outputLine = BuildIf(match.Groups[1].Value, ConditionalKeyword.@if, lineNumber);
 				return true;
 			}
 
@@ -336,11 +336,31 @@ namespace Pinion.Compiler.Internal
 				if (string.IsNullOrEmpty(condition))
 					errorsEncountered.Add(($"Empty elseif statement.'", lineNumber));
 
+				// elseif is the same as else with a nested if, with the added convention that the else and if are coterminous.
+				// I.E. no user-written instructions can happen between the opening/closing of the else-scope and its nested if-scope.
+				// An if built as "part of" an elseif will increase "endif debt".
+				// Whenever we endif ourselves out of a scope and into a parent scope with a lower debt, we know 
+				// an additional "virtual endif" is required.
+
+				// EXAMPLE. This:
+				// if
+				// elseif
+				// elseif
+				// endif
+
+				// is internally rewritten to:
+				//	if 					(debt 0)
+				//	else 				(debt 0)
+				// 		if 				(debt 1)
+				// 		else 			(debt 1)
+				// 			if 			(debt 2)
+				// 			endif 		(debt 2)
+				// 		endif 			(virtual endif because debt goes from 2 to 1)
+				//	endif 				(virtual endif because debt goes from 1 to 0)
+
+
 				string elseLogic = BuildElse(ConditionalKeyword.elseif, lineNumber);
-				// Second argument: Reuse the same branch index as was generated for the ELSE above. Essentially this means that the IF is not truly "nested" in the ELSE.
-				// The alternative would mean we have to close two branches when encountering the single ENDIF further on: one explicitly for the enclosing ELSE and one implicitly for the nested IF.
-				// That was harder, so we go with this solution.
-				string ifLogic = BuildIf(condition, ConditionalKeyword.@if, true);
+				string ifLogic = BuildIf(condition, ConditionalKeyword.elseif, lineNumber, true);
 				outputLine = elseLogic + System.Environment.NewLine + ifLogic;
 				return true;
 			}
@@ -365,7 +385,7 @@ namespace Pinion.Compiler.Internal
 			return false;
 		}
 
-		private static string BuildIf(string condition, ConditionalKeyword keyword, bool incursEndIfDebt = false)
+		private static string BuildIf(string condition, ConditionalKeyword keyword, int lineNumber, bool incursEndIfDebt = false)
 		{
 			string label = null;
 			int currentDebt = 0;
@@ -377,24 +397,24 @@ namespace Pinion.Compiler.Internal
 					currentDebt++;
 			}
 
-			label = $"{branchLabelBase}{OpenBranch(keyword, currentDebt).index}";
+			label = $"{branchLabelBase}{OpenBranch(keyword, lineNumber, currentDebt).index}";
 			return $"{CompilerConstants.ConditionLabelJump}{CompilerConstants.LabelReadPrefix}{label},{condition}";
 		}
 
 		private static string BuildElse(ConditionalKeyword keyword, int lineNumber)
 		{
 			string result = string.Empty;
-			BranchInfo previousBranch = CloseBranch(lineNumber);
-			ConditionalKeyword previousKeyword = previousBranch.keyword;
-			int endIfDepth = previousBranch.endIfDebt;
+			BranchInfo branchToClose = CloseBranch(lineNumber);
+			ConditionalKeyword previousKeyword = branchToClose.keyword;
+			int endIfDebt = branchToClose.endIfDebt;
 
 			if (previousKeyword != ConditionalKeyword.@if && previousKeyword != ConditionalKeyword.elseif)
 			{
 				errorsEncountered.Add(($"The conditional keyword {keyword} must be preceded by {ConditionalKeyword.@if} or {ConditionalKeyword.elseif}.", lineNumber));
 			}
 
-			string closeBranchLabel = $"{branchLabelBase}{previousBranch.index}";
-			string openBranchLabel = $"{branchLabelBase}{OpenBranch(keyword, endIfDepth).index}";
+			string closeBranchLabel = $"{branchLabelBase}{branchToClose.index}";
+			string openBranchLabel = $"{branchLabelBase}{OpenBranch(keyword, lineNumber, endIfDebt).index}";
 
 			return $"{CompilerConstants.LabelJump}{CompilerConstants.LabelReadPrefix}{openBranchLabel}\r\n{CompilerConstants.LabelCreatePrefixComplete}{closeBranchLabel}";
 		}
@@ -416,42 +436,87 @@ namespace Pinion.Compiler.Internal
 				return result;
 			}
 
-			while (branchStack.Count > 0)
+			// while (branchStack.Count > 0)
+			// {
+			// 	BranchInfo previousBranch = CloseBranch(lineNumber);
+			// 	ConditionalKeyword previousKeyword = previousBranch.keyword;
+
+			// 	if (previousKeyword == ConditionalKeyword.endif)
+			// 	{
+			// 		errorsEncountered.Add(($"The conditional keyword {ConditionalKeyword.endif} must be preceded by {ConditionalKeyword.@if}, {ConditionalKeyword.@else}, or {ConditionalKeyword.elseif}.", lineNumber));
+			// 	}
+
+			// 	string closeBranchLabel = $"{branchLabelBase}{previousBranch.index}";
+			// 	result += $"{CompilerConstants.LabelCreatePrefixComplete}{closeBranchLabel}";
+
+			// 	if (previousBranch.endIfDebt > 0)
+			// 	{
+			// 		result += System.Environment.NewLine;
+			// 	}
+			// 	else
+			// 	{
+			// 		break;
+			// 	}
+			// }
+
+			BranchInfo branchToClose = CloseBranch(lineNumber);
+			ConditionalKeyword branchToCloseKeyword = branchToClose.keyword;
+
+			if (branchToCloseKeyword == ConditionalKeyword.endif)
 			{
-				BranchInfo previousBranch = CloseBranch(lineNumber);
-				ConditionalKeyword previousKeyword = previousBranch.keyword;
+				errorsEncountered.Add(($"The conditional keyword {ConditionalKeyword.endif} must be preceded by {ConditionalKeyword.@if}, {ConditionalKeyword.@else}, or {ConditionalKeyword.elseif}.", lineNumber));
+			}
 
-				if (previousKeyword == ConditionalKeyword.endif)
-				{
-					errorsEncountered.Add(($"The conditional keyword {ConditionalKeyword.endif} must be preceded by {ConditionalKeyword.@if}, {ConditionalKeyword.@else}, or {ConditionalKeyword.elseif}.", lineNumber));
-				}
+			string closeBranchLabel = $"{branchLabelBase}{branchToClose.index}";
+			result += $"{CompilerConstants.LabelCreatePrefixComplete}{closeBranchLabel}";
 
-				string closeBranchLabel = $"{branchLabelBase}{previousBranch.index}";
-				result += $"{CompilerConstants.LabelCreatePrefixComplete}{closeBranchLabel}";
 
-				if (previousBranch.endIfDebt > 0)
-				{
-					result += System.Environment.NewLine;
-				}
-				else
-				{
-					break;
-				}
+			int endIfDebtParentBranch = (branchStack.Count > 0) ? GetCurrentBranch().endIfDebt : 0;
+
+			if (branchToClose.endIfDebt > endIfDebtParentBranch)
+			{
+				result += System.Environment.NewLine;
+				result += BuildEndIf(lineNumber);
 			}
 
 			return result;
 		}
 
-		private static BranchInfo OpenBranch(ConditionalKeyword keyword, int endIfDebt = 0)
+		private static BranchInfo OpenBranch(ConditionalKeyword keyword, int lineNumber, int endIfDebt = 0)
 		{
-			branchStack.Push(new BranchInfo(branchUniqueIndex, keyword, endIfDebt));
+			BranchInfo newBranch = new BranchInfo(branchUniqueIndex, keyword, endIfDebt);
+			branchStack.Push(newBranch);
 			branchUniqueIndex++;
-			return branchStack.Peek();
+
+
+#if UNITY_EDITOR
+			// string indent = string.Empty;
+
+			// for (int i = 0; i < branchStack.Count - 1; i++)
+			// {
+			// 	indent += "\t";
+			// }
+			// UnityEngine.Debug.Log($"{indent}[{lineNumber}] Open branch: kw: {newBranch.keyword}, index: {newBranch.index}, debt: {newBranch.endIfDebt}");
+#endif
+			return newBranch;
 		}
 
 		private static BranchInfo CloseBranch(int lineNumber)
 		{
-			return branchStack.Pop();
+			BranchInfo closedBranch = branchStack.Pop();
+
+
+#if UNITY_EDITOR
+			// string indent = string.Empty;
+
+			// for (int i = 0; i < branchStack.Count; i++)
+			// {
+			// 	indent += "\t";
+			// }
+			// UnityEngine.Debug.Log($"{indent}[{lineNumber}] Close branch: kw: {closedBranch.keyword}, index: {closedBranch.index}, debt: {closedBranch.endIfDebt}");
+#endif
+
+			return closedBranch;
 		}
 
 		private static BranchInfo GetCurrentBranch()

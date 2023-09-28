@@ -86,8 +86,6 @@ namespace Pinion.ContainerMemory
 				}
 			}
 
-
-
 			return true;
 		}
 
@@ -237,6 +235,23 @@ namespace Pinion.ContainerMemory
 			}
 
 			register[arrayLocation + indexInArray] = writeValue;
+		}
+
+		public int GetArrayLength(PinionContainer container, int arrayLocation)
+		{
+			if (arrayLocation < 0 || arrayLocation >= registerMax)
+			{
+				container.LogError($"Address {arrayLocation} for {typeof(T)} register is invalid. Address should range from 0 to {registerMax - 1}.");
+				return -1;
+			}
+
+			if (arrayLocation > registerCount)
+			{
+				container.LogError($"Getting size of array at invalid address {arrayLocation}. Current register size is {registerCount}.");
+				return -1;
+			}
+
+			return valueMetadata[arrayLocation].arrayLength;
 		}
 
 		public void StoreExternalVariables(System.ValueTuple<string, object>[] externalVariables)

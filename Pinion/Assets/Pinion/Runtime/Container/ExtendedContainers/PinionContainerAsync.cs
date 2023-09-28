@@ -9,7 +9,8 @@ namespace Pinion.ExtendedContainers
 	// This can be used to support Unity logic that returns asynchronously, while still treating it as "synchronous" for the purposes of the script itself.
 	public class PinionContainerAsync : PinionContainer
 	{
-		private List<System.Func<bool>> waitConditions = new List<System.Func<bool>>();
+		// Small default capacity because there are presumably relatively few of these. Capacity will auto-expand if needed anyway.
+		private List<System.Func<bool>> waitConditions = new List<System.Func<bool>>(8);
 
 		public string ProgressMessage
 		{
@@ -36,9 +37,9 @@ namespace Pinion.ExtendedContainers
 #if UNITY_EDITOR
 			if (!Application.isPlaying)
 			{
-				Debug.LogWarning("Can only use regular Sleep() instruction at edit time. Script will simply continue instead. This may have unintended consequences.");
+				Debug.LogWarning("At edit time, all Sleep commands behave as base Sleep(), regardless of container type. Script will continue here on the next run. This may have unintended consequences.");
 				waitConditions.Clear();
-				SleepContinueHandler();
+				ProgressMessage = string.Empty;
 				return;
 			}
 #endif
@@ -54,6 +55,7 @@ namespace Pinion.ExtendedContainers
 			{
 				System.Func<bool> waitCondition = waitConditions[i];
 
+				// Logic is "sleep while condition is true" so false means stop sleeping.
 				if (waitCondition.Invoke() == false)
 				{
 					waitConditions.Remove(waitCondition);

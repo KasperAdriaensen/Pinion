@@ -116,10 +116,9 @@ namespace Pinion.Compiler
 				previousToken = currentToken;
 				currentToken = tokens[i];
 
-#if UNITY_EDITOR && PINION_COMPILE_DEBUG
-				Debug.Log($"[PinionCompiler] Parsing token: {currentToken}");
-#endif
-
+				// First check if the last token we parsed matched the expectation pattern.
+				// If not, throw an error.
+				// We have to do this at the start of the "next" iteration, because the parsing below determines the value of previousTokenType.
 				if (expectedAfterPreviousToken.Count > 0 && previousTokenType != TokenType.None && !expectedAfterPreviousToken.Contains(previousTokenType))
 				{
 					string expectedTokenString = string.Empty;
@@ -137,6 +136,9 @@ namespace Pinion.Compiler
 					AddCompileError($"Unexpected token: {previousToken}. Expected {expectedTokenString}.");
 				}
 
+				// If the previousToken fit expectations, we will now update the expectation pattern to match
+				// anything following previousToken.
+				// Next loop we can then match this iteration's currentToken against that pattern.
 				expectedAfterPreviousToken.Clear();
 
 				switch (previousTokenType)
@@ -145,6 +147,7 @@ namespace Pinion.Compiler
 						expectedAfterPreviousToken.Add(TokenType.Atomic);
 						expectedAfterPreviousToken.Add(TokenType.Instruction);
 						expectedAfterPreviousToken.Add(TokenType.Operator);
+						expectedAfterPreviousToken.Add(TokenType.ParenthesisOpen);
 						break;
 					case TokenType.ParenthesisOpen:
 						expectedAfterPreviousToken.Add(TokenType.Atomic);
@@ -180,6 +183,10 @@ namespace Pinion.Compiler
 
 				previousTokenType = TokenType.None;
 
+#if UNITY_EDITOR && PINION_COMPILE_DEBUG
+				Debug.Log($"[PinionCompiler] Parsing token: {currentToken}");
+#endif
+
 				if (currentToken == ArgSeparator)
 				{
 					previousTokenType = TokenType.ArgSeparator;
@@ -208,7 +215,7 @@ namespace Pinion.Compiler
 
 					if (!foundOpeningParenthesis)
 					{
-						AddCompileError("Invalid argument separator ','.'");
+						AddCompileError("Encountered argument separator ',' without an opening parenthesis '('.");
 						break;
 					}
 

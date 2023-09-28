@@ -7,14 +7,14 @@ namespace Pinion.Internal
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.InitBegin)]
 		public static void InitBegin(PinionContainer container)
 		{
-			container.OnInitBegin();
+			container.BeginInit();
 		}
 
 		[APIMethod(MethodFlags = APIMethodFlags.Internal)]
 		[APIInternalMethodIdentifier(PinionAPIInternalIDs.InitEnd)]
 		public static void InitEnd(PinionContainer container)
 		{
-			container.OnInitEnd();
+			container.EndInit();
 		}
 
 		// Currently not used, easily restored.

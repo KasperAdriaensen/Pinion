@@ -3,6 +3,7 @@ namespace Pinion
 {
 	using System.Globalization;
 	using Pinion.Documentation;
+	using Pinion.Documentation.Internal;
 
 	[APISource]
 	[DocSourceDisplayName("Text")]

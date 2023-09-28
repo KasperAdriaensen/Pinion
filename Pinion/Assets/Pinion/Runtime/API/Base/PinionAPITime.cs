@@ -16,10 +16,10 @@ namespace Pinion
 
 		/// Returns the duration of the last game frame in seconds. Use this to e.g. add to a timer every frame.
 		/// #code
-		/// $timer += GetLastFrameDuration()
+		/// $timer += $name()
 		/// #endcode
 		[APIMethod]
-		public static float GetLastFrameDuration()
+		public static float GetDeltaTime()
 		{
 			return Time.deltaTime;
 		}

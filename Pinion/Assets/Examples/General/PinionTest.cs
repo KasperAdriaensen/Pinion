@@ -36,7 +36,7 @@ public class PinionTest : MonoBehaviour
 
 			errorMessages.Clear();
 
-			currentScriptContainer = PinionCompiler.Compile<PinionContainerLooping>(testText.text, AddCompileError);
+			currentScriptContainer = PinionCompiler.Compile<PinionContainerAutonomous>(testText.text, AddCompileError);
 
 			errorDisplay.text = ("Compiling..." + System.Environment.NewLine + System.Environment.NewLine);
 
