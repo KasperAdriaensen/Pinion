@@ -4,17 +4,20 @@ using UnityEditor;
 using System.Text;
 using System.Reflection;
 using System;
-using Pinion.Compiler.Internal;
 using System.IO;
 using System.Text.RegularExpressions;
+using Pinion.Compiler.Internal;
+using Pinion.Documentation.Internal;
 
 namespace Pinion.Documentation
 {
-	public class DocumentationCrawler : EditorWindow
+	public class DocumentationGenerator : EditorWindow
 	{
 		[SerializeField]
-		private TextAsset[] prependTexts = null;
-
+		private TextAsset[] textAddedToBeginning = null;
+		[SerializeField]
+		private TextAsset[] textAddedToEnd = null;
+		[TextArea(5, 3)]
 		[SerializeField]
 		private string skipList = string.Empty;
 
@@ -24,14 +27,15 @@ namespace Pinion.Documentation
 		private Dictionary<Type, string> friendlyTypeDictionary = null;
 
 		private SerializedObject serializedObject = null;
-		private SerializedProperty propPrependTexts = null;
+		private SerializedProperty propTextAddedToBeginning = null;
+		private SerializedProperty propTextAddedToEnd = null;
 		private SerializedProperty propSkipList = null;
 
 
 		[MenuItem("Window/Pinion/Documentation Generator")]
 		private static void ShowWindow()
 		{
-			var window = GetWindow<DocumentationCrawler>();
+			var window = GetWindow<DocumentationGenerator>();
 			window.titleContent = new GUIContent("Documentation Generator");
 			window.Show();
 		}
@@ -39,27 +43,33 @@ namespace Pinion.Documentation
 		private void OnEnable()
 		{
 			serializedObject = new SerializedObject(this);
-			propPrependTexts = serializedObject.FindProperty("prependTexts");
+			propTextAddedToBeginning = serializedObject.FindProperty("textAddedToBeginning");
+			propTextAddedToEnd = serializedObject.FindProperty("textAddedToEnd");
 			propSkipList = serializedObject.FindProperty("skipList");
 		}
 
 		private void OnGUI()
 		{
 			serializedObject.Update();
-			EditorGUILayout.HelpBox("Compiles a Markdown-formatted overview of all API instructions in this project.", MessageType.Info);
+			EditorGUILayout.HelpBox("Compiles a Markdown-formatted overview of all API methods in this project.", MessageType.Info);
 
 			GUILayout.Space(20f);
 
-			GUILayout.Label("Other text (Markdown-formatted) to add in front of auto-generated documentation.");
-			EditorGUILayout.PropertyField(propPrependTexts);
+			GUILayout.Label("Other text (Markdown-formatted) to add before auto-generated documentation.");
+			EditorGUILayout.PropertyField(propTextAddedToBeginning);
 			GUILayout.Space(20f);
 
-			GUILayout.Label("Classes to skip. Comma-separated.");
-			if (GUILayout.Button("Fill with default skip list"))
-			{
-				EnterDefaultSkipList();
-			}
+			GUILayout.Label("Other text (Markdown-formatted) to add after the auto-generated documentation.");
+			EditorGUILayout.PropertyField(propTextAddedToEnd);
+			GUILayout.Space(20f);
+
+
+			GUILayout.Label("Classes to skip. Comma-separated.", EditorStyles.boldLabel);
 			EditorGUILayout.PropertyField(propSkipList);
+			if (GUILayout.Button("Add all built-in API sources"))
+			{
+				FillSkipListAllBuiltIn();
+			}
 
 			GUILayout.Space(50f);
 
@@ -70,20 +80,53 @@ namespace Pinion.Documentation
 			serializedObject.ApplyModifiedProperties();
 		}
 
-		private void EnterDefaultSkipList()
+		private void FillSkipListAllBuiltIn()
 		{
-			skipList = "PinionAPIAsserts";
+			List<Type> allAPISources = new List<Type>();
+			PinionAPI.StoreAllAPISources(allAPISources);
+			HashSet<string> skipClasses = new HashSet<string>(skipList.Split(','));
+
+			foreach (Type source in allAPISources)
+			{
+				if (!string.IsNullOrEmpty(source.Namespace) && source.Namespace.StartsWith("Pinion"))
+				{
+					// These classes are not meant to be public and should only contain API methods
+					// marked as Internal, which are excluded by default.
+					// We won't even include them in the list to not confuse things further.
+					if (source.Namespace.StartsWith("Pinion.Internal"))
+						continue;
+
+					if (!skipClasses.Contains(source.Name))
+					{
+						skipClasses.Add(source.Name);
+					}
+				}
+			}
+
+			StringBuilder stringBuilder = new StringBuilder();
+
+			foreach (string skipClass in skipClasses)
+			{
+				// Don't put comma before first element
+				if (stringBuilder.Length > 0)
+					stringBuilder.Append(", ");
+
+				stringBuilder.Append(skipClass);
+			}
+
+			skipList = stringBuilder.ToString();
 		}
 
-		private void GenerateDocumentation(bool includeInternal = false)
+		private void GenerateDocumentation()
 		{
 			StringBuilder stringBuilder = new StringBuilder();
 
-			if (prependTexts != null && prependTexts.Length > 0) // This accomplishes nothing, except for stopping the compiler from throwing a warning it's not "used" otherwise.
+			// textAddedToBeginning.Length checks accomplishes nothing, except for stopping the compiler from throwing a warning that it's not "used".
+			if (textAddedToBeginning != null && textAddedToBeginning.Length > 0)
 			{
-				for (int i = 0; i < propPrependTexts.arraySize; i++)
+				for (int i = 0; i < propTextAddedToBeginning.arraySize; i++)
 				{
-					TextAsset textAsset = (TextAsset)propPrependTexts.GetArrayElementAtIndex(i).objectReferenceValue;
+					TextAsset textAsset = (TextAsset)propTextAddedToBeginning.GetArrayElementAtIndex(i).objectReferenceValue;
 
 					if (textAsset != null)
 					{
@@ -123,11 +166,13 @@ namespace Pinion.Documentation
 				if (nameAttribute != null)
 					sourceName = nameAttribute.DisplayName;
 
+				// Remove all marked with DocMethodHideAttribute.
 				allMethodsInAPISource.RemoveAll(m => m.Item2.GetCustomAttribute<DocMethodHideAttribute>() != null);
 
-				if (!includeInternal)
-					allMethodsInAPISource.RemoveAll(m => m.Item1.HasFlag(APIMethodFlags.Internal));
+				// Remove all internal methods.
+				allMethodsInAPISource.RemoveAll(m => m.Item1.HasFlag(APIMethodFlags.Internal));
 
+				// Don't create empty categories.
 				if (allMethodsInAPISource.Count <= 0)
 					continue;
 
@@ -140,11 +185,6 @@ namespace Pinion.Documentation
 				{
 					APIMethodAttribute methodAttribute = methodInSource.Item1;
 					MethodInfo methodInfo = methodInSource.Item2;
-
-					if (methodAttribute.HasFlag(APIMethodFlags.Internal))
-					{
-						stringBuilder.Append("[INTERNAL] ");
-					}
 
 					string instructionName = methodInfo.Name;
 
@@ -170,14 +210,12 @@ namespace Pinion.Documentation
 					else
 						AppendInstruction(stringBuilder, instructionName, methodInfo);
 
-
 					Type returnType = methodInfo.ReturnType;
 
 					if (returnType != typeof(void))
 					{
 						stringBuilder.Append(" returns ");
 						stringBuilder.Append(FormatTypeName(PinionTypes.GetPinionNameFromType(methodInfo.ReturnType)));
-
 					}
 
 					stringBuilder.Append("  "); // Markdown line break
@@ -197,6 +235,20 @@ namespace Pinion.Documentation
 				}
 
 				stringBuilder.AppendLine();
+			}
+
+			// textAddedToEnd.Length checks accomplishes nothing, except for stopping the compiler from throwing a warning that it's not "used".
+			if (textAddedToEnd != null && textAddedToEnd.Length > 0)
+			{
+				for (int i = 0; i < propTextAddedToEnd.arraySize; i++)
+				{
+					TextAsset textAsset = (TextAsset)propTextAddedToEnd.GetArrayElementAtIndex(i).objectReferenceValue;
+
+					if (textAsset != null)
+					{
+						stringBuilder.Append(textAsset.text);
+					}
+				}
 			}
 
 			string fileContents = stringBuilder.ToString();
@@ -354,7 +406,7 @@ namespace Pinion.Documentation
 
 			StringBuilder processedDocumentationBuilder = new StringBuilder();
 			Regex commentStartStripRegex = new Regex(@"\s*\/{3} *");
-			bool codeBlock = false;
+			//bool codeBlock = false;
 			using (StringReader reader = new StringReader(match.Groups[1].Value)) // Capture group 1 is actual comment text
 			{
 				string line = string.Empty;
@@ -369,19 +421,21 @@ namespace Pinion.Documentation
 
 					if (line == "#code")
 					{
-						codeBlock = true;
-						processedDocumentationBuilder.AppendLine();
+						//codeBlock = true;
+						processedDocumentationBuilder.AppendLine("```");
 						continue;
 					}
 					else if (line == "#endcode")
 					{
-						codeBlock = false;
-						processedDocumentationBuilder.AppendLine();
+						//codeBlock = false;
+						processedDocumentationBuilder.AppendLine("```");
 						continue;
 					}
 
-					if (codeBlock)
-						processedDocumentationBuilder.Append("\t"); // Markdown for code block
+					// Kept for reference - new approach now uses fenced blocks.
+					// Markdown for code block
+					// if (codeBlock)
+					// 	processedDocumentationBuilder.Append("\t"); 
 
 					processedDocumentationBuilder.Append(line);
 					// We treat any linebreak in the comment as just a continuation of the same paragraph.
@@ -416,7 +470,7 @@ namespace Pinion.Documentation
 			// Replace $return with return type
 			processDocumentation = Regex.Replace(processDocumentation, "\\$return", $"{FormatTypeName(GetTypeString(methodInfo.ReturnType))}");
 
-			// Replace $return with instructionName
+			// Replace $name with instructionName
 			processDocumentation = Regex.Replace(processDocumentation, "\\$name", $"{methodInfo.Name}");
 
 			return processDocumentation;
