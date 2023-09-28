@@ -7,10 +7,10 @@ using Pinion.ContainerMemory;
 
 namespace Pinion.ExtendedContainers
 {
-	public class PinionContainerLooping : PinionContainer
+	public class PinionContainerAutonomous : PinionContainer
 	{
-		// For a looping script, InstantOnce doesn't really make sense, but this way,
-		// the child class can still acts as an extension of the base class, rather than being a loop-only "replacement".
+		// For a self-calling script, InstantOnce doesn't really make sense, but this way, the child class 
+		// can still acts as an extension of the base class, rather than being a "loop-only replacement".
 		// "Never" is simply there to facilitate flag checking (InstantOnce == 0 would always trigger.)
 		[System.Flags]
 		public enum ExecuteScheduling
@@ -34,13 +34,15 @@ namespace Pinion.ExtendedContainers
 		// TODO: Make these configurable
 		private ExecuteScheduling executeScheduling = ExecuteScheduling.InstantOnce;
 		private ExecuteLoop executeLoop = ExecuteLoop.DontLoop;
-		private float loopInterval = 2;
+		private float loopInterval = 1;
 		private float sleepResumeTime = -1;
 		private float lastExecuteTime = float.NegativeInfinity;       // any timestamp should be > than this value, so first iteration will always run
 		private float lastExecuteTimeFixed = float.NegativeInfinity;  // any timestamp should be > than this value, so first iteration will always run
 
 		public override void Run(System.Action<LogType, string> logHandler = null, params System.ValueTuple<string, object>[] externalVariables)
 		{
+			// We don't call base.Run() here, since that would immediatelly call RunInternal under all circumstances.
+
 			this.logHandler = logHandler;
 			this.externalVariables = externalVariables;
 
@@ -54,9 +56,9 @@ namespace Pinion.ExtendedContainers
 				UnityEventCaller.BindFixedUpdate(OnFixedUpdate);
 		}
 
-		public override void Stop()
+		protected override void OnStop()
 		{
-			base.Stop();
+			base.OnStop();
 			UnityEventCaller.UnbindUpdate(OnUpdate);
 			UnityEventCaller.UnbindFixedUpdate(OnFixedUpdate);
 			UnityEventCaller.UnbindUpdate(SleepContinueHandler);
@@ -66,6 +68,19 @@ namespace Pinion.ExtendedContainers
 
 		private void OnUpdate()
 		{
+			// If sleeping, we don't want to update.
+			// A cleaner way of doing this would be unbind the (fixed)update calls to OnUpdate() during sleep,
+			// but that would easily lead to situations where RunInternal() is called twice in a frame: 
+			// Once from SleepContinueHandler() and once more from OnUpdate(), rebound as part of exiting sleep.
+			// Since we can guarantee the original (fixed)update calls are always earlier in the update chain than SleepContinueHandler(),
+			// (they are bound before any API calls are made), polling InternalState.Sleeping here is less error prone.
+			// OnUpdate WILL happen first and instantly return because of InternalState.Sleeping. 
+			// Only THEN will SleepContinueHandler execute, remove InternalState.Sleeping and call the RunInternal() for that frame.
+			if (HasStateFlag(InternalState.Sleeping))
+			{
+				return;
+			}
+
 			if (executeLoop == ExecuteLoop.TimedInterval)
 			{
 				if (Time.time >= lastExecuteTime + loopInterval)
@@ -123,7 +138,6 @@ namespace Pinion.ExtendedContainers
 
 			if (metaData == null)
 				throw new System.ArgumentNullException(nameof(metaData));
-
 
 			using (StringReader reader = new StringReader(metaData))
 			{
@@ -233,8 +247,7 @@ namespace Pinion.ExtendedContainers
 #if UNITY_EDITOR
 			if (!Application.isPlaying)
 			{
-				Debug.LogWarning("Can only use regular Sleep() instruction at edit time. Script will simply continue instead. This may have unintended consequences.");
-				SleepContinueHandler();
+				Debug.LogWarning("At edit time, all Sleep commands behave as base Sleep(), regardless of container type. Script will continue here on the next run. This may have unintended consequences.");
 				return;
 			}
 #endif
@@ -245,7 +258,6 @@ namespace Pinion.ExtendedContainers
 
 		private void SleepContinueHandler()
 		{
-
 			// Time.time is weird in editor. Let's just always have succeed it immediately.
 #if UNITY_EDITOR
 			if (!Application.isPlaying)
