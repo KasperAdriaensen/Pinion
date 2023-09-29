@@ -19,13 +19,13 @@ namespace Pinion.Editor
 		}
 
 		private static List<string> possiblePinionDefines = new List<string>
-	{
-		compileDebug,
-		runtimeDebug,
-		logCompileErrorsAlways,
-		logCompileErrorsEditor,
-		logCompileErrorsNever
-	};
+		{
+			compileDebug,
+			runtimeDebug,
+			logCompileErrorsAlways,
+			logCompileErrorsEditor,
+			logCompileErrorsNever
+		};
 
 		private const string compileDebug = "PINION_COMPILE_DEBUG";
 		private bool compileDebugActive = false;
@@ -162,7 +162,7 @@ namespace Pinion.Editor
 			if (runtimeDebugActive)
 				newDefines.Add(runtimeDebug);
 
-			else if (logCompileErrorOption == LogCompileErrorOptions.InEditorOnly)
+			if (logCompileErrorOption == LogCompileErrorOptions.InEditorOnly)
 			{
 				newDefines.Add(logCompileErrorsEditor);
 			}
