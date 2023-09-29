@@ -113,7 +113,7 @@ namespace Pinion.Compiler
 			// Some instruction are internals only - they make the system itself function. We don't really want the player to know or care about these.
 			// Normally, we shouldn't even get to this point, since the parsing by default filters out internal functions. It won't "recognize" those strings as instructions at all.
 			// However, if we do end up here in some freak accident, we'll trow a compiler error just in case.
-			if (matchedInstruction.internalInstruction)
+			if (matchedInstruction.isInternal)
 			{
 				providedArguments.Clear();
 				AddCompileError($"[PinionCompiler] Expression {instructionString} is reserved for internal use only.");

@@ -9,6 +9,7 @@ using System.Linq.Expressions;
 using System.Linq;
 using System;
 using Pinion.ContainerMemory;
+using System.ComponentModel;
 
 namespace Pinion
 {
@@ -17,8 +18,9 @@ namespace Pinion
 		/* NOMENCLATURE =====================================
 		In the code below, there's quite a bit of switching between representing the instruction as a string, ushort...
 		For clarity's sake, the code below aims to use the following naming as consistently as possible:
-		* ushort 		-> "instruction code" / "code"
-		* string 		-> "instruction string" / "string"
+		* ushort 			-> "instruction code" / "code"
+		* string 			-> "instruction string" / "string"
+		* InstructionData 	-> "instruction data" - custom class that contains all necessary info for this API call
 		*/
 
 		public const int MaxParameterCount = 16;
@@ -56,22 +58,45 @@ namespace Pinion
 
 		public static bool BuildAPI(System.Action<string> errorMessageReceiver)
 		{
+			return BuildAPI(errorMessageReceiver, false, null);
+		}
+
+		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild)
+		{
+			return BuildAPI(errorMessageReceiver, forceRebuild, null);
+		}
+
+		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild, params Type[] extraAPISources)
+		{
 			if (attemptedBuild)
 				return buildSuccess;
 
 			instructionStringsLookup.Clear();
 			internalIdentifierLookup.Clear();
 
-			// Returns all methods marked with [APIMethod] from all classes marked with [APISource].
-			IEnumerable<(APIMethodAttribute, MethodInfo)> allAPIMethods = GetAllAPIMethods();
+			// GetDiscoverableAPISources returns all classes marked with [APISource].
+			// extraAPISources can be used to build from extra API sources *not* marked with marked with [APISource].
+			// The latter is a pretty exceptional use case for if you want certain API to only be compilable in certain contexts.
+			// E.g. current only use: to make sure the API from the examples in the package isn't always automatically included.
+
+			IEnumerable<(APIMethodAttribute, MethodInfo)> allAPIMethods;
+
+			if (extraAPISources != null)
+			{
+				allAPIMethods = GetAPIMethodsFromSources(GetDiscoverableAPISources().Union(extraAPISources));
+			}
+			else
+			{
+				allAPIMethods = GetAPIMethodsFromSources(GetDiscoverableAPISources());
+			}
 
 			bool overallSuccess = true;
 			ushort currentInstructionCode = firstCustomInstructionCode;
-			List<InstructionData> builtInstructions = new List<InstructionData>();
+			List<InstructionData> builtInstructionData = new List<InstructionData>();
 
 			foreach ((APIMethodAttribute, MethodInfo) methodInSource in allAPIMethods)
 			{
-				// if we've failed to build an instruction, no point continuing with the rest
+				// If we've failed to build a previous API methods, no point continuing with the rest.
 				if (overallSuccess == false)
 					break;
 
@@ -104,14 +129,14 @@ namespace Pinion
 					if (instructionStringsLookup.ContainsKey(instructionString))
 					{
 						List<InstructionData> lookupList = instructionStringsLookup[instructionString];
-						bool currentInstructionInternal = instructionData.internalInstruction;
+						bool currentInstructionIsInternal = instructionData.isInternal;
 
 						foreach (InstructionData data in lookupList)
 						{
 							// Silly check: we'd rather not have implementers overload internal instructions. (Not strictly a problem, but then you could also overload it with the same arguments!)
 							// Of course, we don't know whether the interal or the normal function will be encountered first.
 							// Therefore, we say that either all internal or all normal is fine, just not a mix of the two.
-							if (data.internalInstruction != currentInstructionInternal)
+							if (data.isInternal != currentInstructionIsInternal)
 							{
 								overallSuccess = false;
 								throw new PinionAPIException($"Instruction '{instructionString}' could not be generated. The name '{instructionString}' is reserved for an internal instruction.");
@@ -154,7 +179,7 @@ namespace Pinion
 						}
 					}
 
-					builtInstructions.Add(instructionData);
+					builtInstructionData.Add(instructionData);
 					currentInstructionCode++;
 				}
 				catch (System.Exception exception)
@@ -188,19 +213,26 @@ namespace Pinion
 				matchList.TrimExcess();
 			}
 
-			instructionLookUpTable = new InstructionData[firstCustomInstructionCode + builtInstructions.Count];
+			instructionLookUpTable = new InstructionData[firstCustomInstructionCode + builtInstructionData.Count];
 
-			for (int i = 0; i < builtInstructions.Count; i++)
+			for (int i = 0; i < builtInstructionData.Count; i++)
 			{
-				instructionLookUpTable[firstCustomInstructionCode + i] = builtInstructions[i];
+				instructionLookUpTable[firstCustomInstructionCode + i] = builtInstructionData[i];
 			}
 
 			buildSuccess = overallSuccess;
 			attemptedBuild = true;
 
-			Debug.Log($"API built succesfully. {builtInstructions.Count} API functions discovered.");
+			Debug.Log($"API built succesfully. {builtInstructionData.Count} API functions discovered.");
 			return overallSuccess;
 		}
+
+
+
+
+
+
+
 
 		public static void CallAPIInstruction(ushort instructionCode, PinionContainer callingContainer)
 		{
@@ -253,25 +285,19 @@ namespace Pinion
 			instructionData.Call(callingContainer, instructionParametersReuse);
 		}
 
-		private static IEnumerable<Type> GetAllAPISources()
-		{
-			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-			{
-				// This could be expanded or made less restrictive if need be.
-				// For our current purposes however, this is perfectly fine. Saves iterating over a whole bunch of types that couldn't possibly have our own custom attribute anyway.
-				// if (assembly.GetName().Name != "Assembly-CSharp")
-				// 	continue;
 
-				foreach (Type type in assembly.GetTypes())
+		private static IEnumerable<(APIMethodAttribute, MethodInfo)> GetAPIMethodsFromSources(IEnumerable<Type> allSources)
+		{
+			foreach (Type sourceType in allSources)
+			{
+				foreach ((APIMethodAttribute, MethodInfo) apiMethod in GetAPIMethodsInSource(sourceType))
 				{
-					// only includes classes marked as APISource
-					if (type.GetCustomAttribute(typeof(APISourceAttribute), false) != null)
-						yield return type;
+					yield return apiMethod;
 				}
 			}
 		}
 
-		private static IEnumerable<(APIMethodAttribute, MethodInfo)> GetAllAPIMethodsInSource(Type targetType)
+		private static IEnumerable<(APIMethodAttribute, MethodInfo)> GetAPIMethodsInSource(Type targetType)
 		{
 			BindingFlags methodBindingFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
@@ -284,42 +310,51 @@ namespace Pinion
 			}
 		}
 
-		private static IEnumerable<(APIMethodAttribute, MethodInfo)> GetAllAPIMethods()
+		private static IEnumerable<Type> GetDiscoverableAPISources()
 		{
-			foreach (Type sourceType in GetAllAPISources())
+			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
 			{
-				foreach ((APIMethodAttribute, MethodInfo) apiMethod in GetAllAPIMethodsInSource(sourceType))
+				// Currently iterates over *all* assemblies, even though many couldn't possibly have our own custom attribute anyway.
+				// This only needs to happen once and is pretty quick regardlessly.
+				// Nonetheless, it might be a good idea to create a list of target assemblies, but serializing this is a bit involved.
+
+				foreach (Type type in assembly.GetTypes())
 				{
-					yield return apiMethod;
+					// only includes classes marked as APISource
+					if (type.GetCustomAttribute(typeof(APISourceAttribute), false) != null)
+						yield return type;
 				}
 			}
 		}
 
-		private static IEnumerable<MethodInfo> GetAllAPIResettersInSource(Type targetType)
+		public static void StoreDiscoverableAPIMethods(List<(APIMethodAttribute, MethodInfo)> store)
 		{
-			BindingFlags methodBindingFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+			if (store == null)
+				throw new ArgumentNullException(nameof(store));
 
-			foreach (MethodInfo methodInfo in targetType.GetMethods(methodBindingFlags))
-			{
-				APIResetAttribute methodAttribute = methodInfo.GetCustomAttribute(typeof(APIResetAttribute), false) as APIResetAttribute;
-
-				if (methodAttribute != null)
-					yield return methodInfo;
-			}
+			store.AddRange(GetAPIMethodsFromSources(GetDiscoverableAPISources()));
 		}
 
-		public static void ResetAPISources()
+		public static void StoreDiscoverableAPISources(List<Type> store)
 		{
-			foreach (Type sourceType in GetAllAPISources())
-			{
-				foreach (MethodInfo resetter in GetAllAPIResettersInSource(sourceType))
-				{
-					resetter.Invoke(null, null);
-				}
-			}
+			if (store == null)
+				throw new ArgumentNullException(nameof(store));
+
+			store.AddRange(GetDiscoverableAPISources());
 		}
 
-		private static IEnumerable<MethodInfo> GetAllAPIInitializersInSource(Type targetType)
+		public static void StoreAPIMethodsForSource(Type source, List<(APIMethodAttribute, MethodInfo)> store)
+		{
+			if (store == null)
+				throw new ArgumentNullException(nameof(store));
+
+			if (source == null)
+				throw new ArgumentNullException(nameof(source));
+
+			store.AddRange(GetAPIMethodsInSource(source));
+		}
+
+		private static IEnumerable<MethodInfo> GetAPIInitializersInSource(Type targetType)
 		{
 			BindingFlags methodBindingFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
@@ -332,43 +367,42 @@ namespace Pinion
 			}
 		}
 
+		private static IEnumerable<MethodInfo> GetAPIResettersInSource(Type targetType)
+		{
+			BindingFlags methodBindingFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
+			foreach (MethodInfo methodInfo in targetType.GetMethods(methodBindingFlags))
+			{
+				APIResetAttribute methodAttribute = methodInfo.GetCustomAttribute(typeof(APIResetAttribute), false) as APIResetAttribute;
+
+				if (methodAttribute != null)
+					yield return methodInfo;
+			}
+		}
+
 		public static void InitAPISources()
 		{
-			foreach (Type sourceType in GetAllAPISources())
+			foreach (Type sourceType in GetDiscoverableAPISources())
 			{
-				foreach (MethodInfo initializer in GetAllAPIInitializersInSource(sourceType))
+				foreach (MethodInfo initializer in GetAPIInitializersInSource(sourceType))
 				{
 					initializer.Invoke(null, null);
 				}
 			}
 		}
 
-		public static void StoreAllAPISources(List<Type> store)
+		public static void ResetAPISources()
 		{
-			if (store == null)
-				throw new ArgumentNullException(nameof(store));
-
-			store.AddRange(GetAllAPISources());
+			foreach (Type sourceType in GetDiscoverableAPISources())
+			{
+				foreach (MethodInfo resetter in GetAPIResettersInSource(sourceType))
+				{
+					resetter.Invoke(null, null);
+				}
+			}
 		}
 
-		public static void StoreAPIMethodsForSource(Type source, List<(APIMethodAttribute, MethodInfo)> store)
-		{
-			if (store == null)
-				throw new ArgumentNullException(nameof(store));
 
-			if (source == null)
-				throw new ArgumentNullException(nameof(source));
-
-			store.AddRange(GetAllAPIMethodsInSource(source));
-		}
-
-		public static void StoreAllAPIMethods(List<(APIMethodAttribute, MethodInfo)> store)
-		{
-			if (store == null)
-				throw new ArgumentNullException(nameof(store));
-
-			store.AddRange(GetAllAPIMethods());
-		}
 
 		public static void GetMatchingInstructions(string instructionString, IList<InstructionData> matchStorage, bool allowInternal = false)
 		{
@@ -378,7 +412,7 @@ namespace Pinion
 
 				foreach (InstructionData match in matches)
 				{
-					if (!match.internalInstruction || allowInternal)
+					if (!match.isInternal || allowInternal)
 						matchStorage.Add(match);
 				}
 			}
@@ -395,7 +429,7 @@ namespace Pinion
 
 				foreach (InstructionData match in matches)
 				{
-					if (!match.internalInstruction)
+					if (!match.isInternal)
 						return true;
 				}
 			}
@@ -427,7 +461,7 @@ namespace Pinion
 			else
 			{
 				InstructionData data = instructionLookUpTable[instructionCode];
-				return data.internalInstruction ? null : data;
+				return data.isInternal ? null : data;
 			}
 		}
 	}

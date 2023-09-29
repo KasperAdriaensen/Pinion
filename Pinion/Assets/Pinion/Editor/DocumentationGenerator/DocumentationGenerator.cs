@@ -83,7 +83,7 @@ namespace Pinion.Documentation
 		private void FillSkipListAllBuiltIn()
 		{
 			List<Type> allAPISources = new List<Type>();
-			PinionAPI.StoreAllAPISources(allAPISources);
+			PinionAPI.StoreDiscoverableAPISources(allAPISources);
 			HashSet<string> skipClasses = new HashSet<string>(skipList.Split(','));
 
 			foreach (Type source in allAPISources)
@@ -136,7 +136,7 @@ namespace Pinion.Documentation
 			}
 
 			List<Type> allAPISources = new List<Type>();
-			PinionAPI.StoreAllAPISources(allAPISources);
+			PinionAPI.StoreDiscoverableAPISources(allAPISources);
 			List<(APIMethodAttribute, MethodInfo)> allMethodsInAPISource = new List<(APIMethodAttribute, MethodInfo)>();
 
 			stringBuilder.AppendLine();

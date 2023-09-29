@@ -13,7 +13,7 @@ namespace Pinion.Compiler.Internal
 
 		public readonly ushort instructionCode = 0;
 		public readonly string instructionString = string.Empty;
-		public readonly bool internalInstruction = false;
+		public readonly bool isInternal = false;
 		public readonly Type returnType = null;
 		public readonly int fullParameterCount = 0;
 		public readonly Type requiredContainerType = null;
@@ -26,11 +26,11 @@ namespace Pinion.Compiler.Internal
 		private readonly InstructionInvoker invoker = null;
 		private readonly List<CustomCompileHandler> customCompileHandlers = null; // Only allocated if needed. (Usually not.)
 
-		public InstructionData(ushort instructionCode, MethodInfo methodInfo, bool internalInstruction = false)
+		public InstructionData(ushort instructionCode, MethodInfo methodInfo, bool isInternal = false)
 		{
 			this.instructionCode = instructionCode;
 			this.instructionString = methodInfo.Name;
-			this.internalInstruction = internalInstruction;
+			this.isInternal = isInternal;
 			this.returnType = methodInfo.ReturnType;
 			customCompileHandlers = LinkCustomCompileHandlers(methodInfo);
 
