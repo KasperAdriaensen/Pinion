@@ -36,6 +36,15 @@ namespace Pinion.Editor
 			// property.isExpanded = EditorGUI.Foldout(new Rect(position.x, yPos, position.width, lineHeight), property.isExpanded, property.name);
 			// yPos += lineHeightWithMargin;
 
+			string propertyName = property.name;
+			if (property.propertyPath.Contains("Array")) // Silly workaround, but detects correctly.
+			{
+				propertyName = "Array Item";
+			}
+
+			EditorGUI.LabelField(new Rect(position.x, yPos, position.width, lineHeight), propertyName, EditorStyles.boldLabel);
+			yPos += lineHeightWithMargin;
+
 			// only way to reliably get predicted size of a text area with text wrapping
 			float calculatedTextFieldHeight = EditorStyles.textArea.CalcHeight(new GUIContent(property.stringValue), position.width);
 			calculatedTextFieldHeight = Math.Min(maxTextFieldHeight, calculatedTextFieldHeight);

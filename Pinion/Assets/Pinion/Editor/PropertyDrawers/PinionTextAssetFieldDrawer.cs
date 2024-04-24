@@ -32,7 +32,13 @@ namespace Pinion.Editor
 				return;
 			}
 
-			EditorGUI.ObjectField(new Rect(position.x, yPos, position.width, lineHeight), property);
+			string propertyName = property.name;
+			if (property.propertyPath.Contains("Array")) // Silly workaround, but detects correctly.
+			{
+				propertyName = "Array Item";
+			}
+
+			EditorGUI.ObjectField(new Rect(position.x, yPos, position.width, lineHeight), property, typeof(TextAsset), new GUIContent(propertyName));
 			yPos += lineHeightWithMargin;
 
 			bool cachedGUIEnabled = GUI.enabled;
