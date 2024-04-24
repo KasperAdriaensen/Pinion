@@ -512,25 +512,33 @@ namespace Pinion.Documentation
 			else
 				friendlyTypeDictionary = new Dictionary<Type, string>();
 
-			var mscorlib = Assembly.GetAssembly(typeof(int));
 
-			using (var provider = new Microsoft.CSharp.CSharpCodeProvider())
-			{
-				foreach (var type in mscorlib.DefinedTypes)
-				{
-					if (string.Equals(type.Namespace, "System"))
-					{
-						var typeRef = new System.CodeDom.CodeTypeReference(type);
-						var csTypeName = provider.GetTypeOutput(typeRef);
+			// Temporarily not automated because that reduces cross-platform support.
+			// Currently only a handful of types are supported. We can manage that until we find a better solution.
+			// var mscorlib = Assembly.GetAssembly(typeof(int));
 
-						// Ignore qualified types.
-						if (csTypeName.IndexOf('.') == -1)
-						{
-							friendlyTypeDictionary.Add(type, csTypeName);
-						}
-					}
-				}
-			}
+			// using (var provider = new Microsoft.CSharp.CSharpCodeProvider())
+			// {
+			// 	foreach (var type in mscorlib.DefinedTypes)
+			// 	{
+			// 		if (string.Equals(type.Namespace, "System"))
+			// 		{
+			// 			var typeRef = new System.CodeDom.CodeTypeReference(type);
+			// 			var csTypeName = provider.GetTypeOutput(typeRef);
+
+			// 			// Ignore qualified types.
+			// 			if (csTypeName.IndexOf('.') == -1)
+			// 			{
+			// 				friendlyTypeDictionary.Add(type, csTypeName);
+			// 			}
+			// 		}
+			// 	}
+			// }
+
+			friendlyTypeDictionary.Add(typeof(System.String), "string");
+			friendlyTypeDictionary.Add(typeof(System.Boolean), "bool");
+			friendlyTypeDictionary.Add(typeof(System.Int32), "int");
+			friendlyTypeDictionary.Add(typeof(System.Single), "float");
 		}
 	}
 }
