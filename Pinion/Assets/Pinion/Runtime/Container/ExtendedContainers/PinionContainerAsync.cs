@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Pinion.Utility;
@@ -11,11 +10,22 @@ namespace Pinion.ExtendedContainers
 	{
 		// Small default capacity because there are presumably relatively few of these. Capacity will auto-expand if needed anyway.
 		private List<System.Func<bool>> waitConditions = new List<System.Func<bool>>(8);
+		private System.Func<string> progressMessageGetter = null;
+		private string fixedProgressMessage = string.Empty;
 
 		public string ProgressMessage
 		{
-			get;
-			private set;
+			get
+			{
+				if (progressMessageGetter != null)
+				{
+					return progressMessageGetter();
+				}
+				else
+				{
+					return fixedProgressMessage;
+				}
+			}
 		}
 
 		public void SleepUntilDone(AsyncOperation asyncOperation, string message = null)
@@ -26,7 +36,16 @@ namespace Pinion.ExtendedContainers
 		public void SleepWhile(System.Func<bool> condition, string message = null)
 		{
 			waitConditions.Add(condition);
-			ProgressMessage = message;
+			fixedProgressMessage = message;
+			progressMessageGetter = null;
+			Sleep();
+		}
+
+		public void SleepWhile(System.Func<bool> condition, System.Func<string> progressMessageGetter = null)
+		{
+			waitConditions.Add(condition);
+			fixedProgressMessage = string.Empty;
+			this.progressMessageGetter = progressMessageGetter;
 			Sleep();
 		}
 
@@ -39,7 +58,8 @@ namespace Pinion.ExtendedContainers
 			{
 				Debug.LogWarning("At edit time, all Sleep commands behave as base Sleep(), regardless of container type. Script will continue here on the next run. This may have unintended consequences.");
 				waitConditions.Clear();
-				ProgressMessage = string.Empty;
+				fixedProgressMessage = string.Empty;
+				progressMessageGetter = null;
 				return;
 			}
 #endif
