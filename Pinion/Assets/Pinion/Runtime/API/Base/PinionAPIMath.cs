@@ -1,10 +1,8 @@
 namespace Pinion
 {
-	using System.Collections.Generic;
 	using UnityEngine;
 	using Pinion.Documentation;
 	using Pinion.Documentation.Internal;
-	using Pinion.Compiler.Internal;
 
 	[APISource]
 	[DocSourceDisplayName("Math")]

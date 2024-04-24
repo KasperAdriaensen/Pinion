@@ -1,7 +1,7 @@
 {
-  "name": "com.kasper-adriaensen.pinion",
+  "name": "com.fuel-the-fire.pinion",
   "version": "1.0.0",
   "displayName": "Pinion",
   "description": "Pinion scripting language",
-  "unity": "2020.1"
+  "unity": "2021.3"
 }

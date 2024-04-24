@@ -1,1 +1,11 @@
 # Pinion
+
+Pinion is a lightweight, easy-to-integrate scripting language for Unity that allows you and your players to build custom game behavior without exposing the inner workings of your game. It is not a replacement for C# or other game development tools. It shines most strongly in cases where a game features lots of one-off, "designer content". Examples include quests, puzzles, small interactions, configurable content,... In other words, all things that need some sort of scripting logic, but can hardly be considered systems or mechanics in and of themselves.
+
+Furthermore, Pinion can compile from any text source: a TextAsset in your project, an in-game input field, or an external text file. By definition, your game's modders can have access to the exact same tools as you, but without complicated bindings for other scripting languages or the security risk of on-the-fly C# compilation. 
+
+Special care was given to make Pinion integrate into your project as smoothly as possible. Simply add an attribute to any static method to expose it to your game's scripting API. Beyond that, Pinion makes minimal assumptions about your exact needs. By default, it provides several types of script container, which should cover a wide range of use cases, but you are free to extend or reimplement these as needed. 
+
+Pinion uses a recognizable, C#-ish syntax, is statically typed and currently features four data types (boolean, integer, floating point number, and string). It has typical control structures such as conditional branching or loops, most common operators, and supports variables and arrays. Additionally, a selection of commonly-used APIs comes pre-installed, such as basic math functions, randomization and access to certain Unity variables.
+
+Pinion is a compiled language: it's converted into bytecode once, instead of being interpreted on the fly. This makes it fairly performant, even if it cannot compare to lower-level languages for performance-critical applications. Compilation can happen at a time of your choosing. Compilation errors aim to be maximally informative and in understandable language, and can be displayed anywhere you like.
