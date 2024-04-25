@@ -36,14 +36,18 @@ namespace Pinion.Editor
 			// property.isExpanded = EditorGUI.Foldout(new Rect(position.x, yPos, position.width, lineHeight), property.isExpanded, property.name);
 			// yPos += lineHeightWithMargin;
 
-			string propertyName = property.name;
-			if (property.propertyPath.Contains("Array")) // Silly workaround, but detects correctly.
-			{
-				propertyName = "Array Item";
-			}
-
-			EditorGUI.LabelField(new Rect(position.x, yPos, position.width, lineHeight), propertyName, EditorStyles.boldLabel);
+			EditorGUI.LabelField(new Rect(position.x, yPos, position.width, lineHeight), label, EditorStyles.boldLabel);
 			yPos += lineHeightWithMargin;
+
+			// Don't bother editing multiple at once. Without further adjustments, the code below would just rewrite all fields to the first selected one...
+			if (property.hasMultipleDifferentValues)
+			{
+				Rect messageRect = new Rect(position.x, yPos, position.width, lineHeight);
+				EditorGUI.HelpBox(messageRect, "Cannot edit Pinion text fields with different contents.", MessageType.Info);
+				yPos += lineHeightWithMargin;
+				calculatedHeight = yPos - yPosOriginal;
+				return;
+			}
 
 			// only way to reliably get predicted size of a text area with text wrapping
 			float calculatedTextFieldHeight = EditorStyles.textArea.CalcHeight(new GUIContent(property.stringValue), position.width);
@@ -107,4 +111,3 @@ namespace Pinion.Editor
 		}
 	}
 }
-
