@@ -155,36 +155,36 @@ namespace Pinion.ExtendedContainers
 						continue;
 
 					splitData = line.Split(metaDataSeparator);
-					ParseMetaDataLine(splitData, errorMessageReceiver);
+
+					if (splitData == null)
+					{
+						LogMetaDataParseError(errorMessageReceiver, $"Invalid data in meta block.");
+						return;
+					}
+
+					if (splitData.Length < 2)
+					{
+						LogMetaDataParseError(errorMessageReceiver, $"Invalid data in meta block. Data needs to follow format 'key:value'.");
+						return;
+					}
+
+					string key = splitData[0].Trim();
+					string value = splitData[1].Trim();
+
+					if (splitData.Length > 2)
+					{
+						LogMetaDataParseError(errorMessageReceiver, $"Invalid data in meta block: {splitData[2]}");
+						return;
+					}
+
+					ParseMetaDataKey(key, value, errorMessageReceiver);
 				}
 				while (line != null);
 			}
 		}
 
-
-		private void ParseMetaDataLine(string[] splitData, System.Action<string> errorMessageReceiver)
+		protected virtual void ParseMetaDataKey(string key, string value, System.Action<string> errorMessageReceiver)
 		{
-			if (splitData == null)
-			{
-				DisplayError($"Invalid data in meta block.");
-				return;
-			}
-
-			if (splitData.Length < 2)
-			{
-				DisplayError($"Invalid data in meta block. Data needs to follow format 'key:value'.");
-				return;
-			}
-
-			string key = splitData[0].Trim();
-			string value = splitData[1].Trim();
-
-			if (splitData.Length > 2)
-			{
-				DisplayError($"Invalid data in meta block: {splitData[2]}");
-				return;
-			}
-
 			switch (key)
 			{
 				case "scheduling":
@@ -206,7 +206,7 @@ namespace Pinion.ExtendedContainers
 						}
 						else
 						{
-							DisplayError($"Could not parse '{flag}' to a valid scheduling value.");
+							LogMetaDataParseError(errorMessageReceiver, $"Could not parse '{flag}' to a valid scheduling value.");
 						}
 					}
 					break;
@@ -214,32 +214,30 @@ namespace Pinion.ExtendedContainers
 				case "loop":
 					if (!System.Enum.TryParse<ExecuteLoop>(value, true, out executeLoop))
 					{
-						DisplayError($"Could not parse '{value}' to a valid loop type.");
+						LogMetaDataParseError(errorMessageReceiver, $"Could not parse '{value}' to a valid loop type.");
 					}
 					break;
 
 				case "interval":
 					if (!float.TryParse(value, out loopInterval))
 					{
-						DisplayError($"Could not parse '{value}' to a valid loop interval value.");
+						LogMetaDataParseError(errorMessageReceiver, $"Could not parse '{value}' to a valid loop interval value.");
 					}
 					break;
 
 				default:
-					DisplayError($"Invalid meta block content: '{key}:{value}'");
+					LogMetaDataParseError(errorMessageReceiver, $"Invalid meta block content: '{key}:{value}'");
 					break;
-			}
-
-			// Local method just to prevent some boilerplate
-			void DisplayError(string message)
-			{
-				if (errorMessageReceiver != null)
-					errorMessageReceiver(message);
 			}
 		}
 
-		// This is called when a script instruction calls Sleep()
+		protected void LogMetaDataParseError(System.Action<string> errorMessageReceiver, string errorMessage)
+		{
+			if (errorMessageReceiver != null)
+				errorMessageReceiver(errorMessage);
+		}
 
+		// This is called when a script instruction calls Sleep()
 		protected override void OnSleep()
 		{
 			base.OnSleep();
@@ -291,4 +289,3 @@ namespace Pinion.ExtendedContainers
 		}
 	}
 }
-
