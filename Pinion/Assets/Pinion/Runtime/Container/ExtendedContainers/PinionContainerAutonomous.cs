@@ -46,14 +46,16 @@ namespace Pinion.ExtendedContainers
 			this.logHandler = logHandler;
 			this.externalVariables = externalVariables;
 
-			if (HasSchedulingFlag(ExecuteScheduling.InstantOnce))
-				RunInternal();
-
 			if (HasSchedulingFlag(ExecuteScheduling.Update))
 				UnityEventCaller.BindUpdate(OnUpdate);
 
 			if (HasSchedulingFlag(ExecuteScheduling.FixedUpdate))
 				UnityEventCaller.BindFixedUpdate(OnFixedUpdate);
+
+			// Call this *after* the BindUpdates! Should the container call Stop in its first run, 
+			// the bindupdate would still happen after that, thereby ignoring the Stop().
+			if (HasSchedulingFlag(ExecuteScheduling.InstantOnce))
+				RunInternal();
 		}
 
 		protected override void OnStop()
