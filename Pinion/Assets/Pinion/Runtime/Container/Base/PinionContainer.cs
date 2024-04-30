@@ -9,7 +9,7 @@ namespace Pinion
 {
 	public class PinionContainer
 	{
-		#region Fields
+		#region Fields & Properties
 		// We don't define a "ran to completion" flag because what that  means exactly could depend a lot
 		// on the exact implementation. Better to implement it there, as needed and as fits the purpose.
 		public enum InternalState
@@ -42,6 +42,7 @@ namespace Pinion
 			get { return stateFlags; }
 		}
 
+		public string name = string.Empty;
 		public int mainBlockStartIndex = 0; // TODO Don't like this being a public value. It should not be altered outside of compilation.
 		public List<ushort> scriptInstructions = new List<ushort>();    // TODO This should not be editable but hard to avoid.
 		public ContainerMemoryRegister<int> IntRegister { get { return intRegister; } }
@@ -70,6 +71,7 @@ namespace Pinion
 		private Dictionary<System.Type, StackValue> stackWrappers = new Dictionary<System.Type, StackValue>(4);
 		private int executionTimeoutMsCustom = -1;
 		#endregion
+
 		#region Run
 		public virtual void Run(System.Action<LogType, string> logHandler = null, params System.ValueTuple<string, object>[] externalVariables)
 		{
