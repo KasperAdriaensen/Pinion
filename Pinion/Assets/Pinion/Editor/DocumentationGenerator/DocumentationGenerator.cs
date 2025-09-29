@@ -539,6 +539,7 @@ namespace Pinion.Documentation
 			friendlyTypeDictionary.Add(typeof(System.Boolean), "bool");
 			friendlyTypeDictionary.Add(typeof(System.Int32), "int");
 			friendlyTypeDictionary.Add(typeof(System.Single), "float");
+			friendlyTypeDictionary.Add(typeof(void), "void");
 		}
 	}
 }
