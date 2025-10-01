@@ -42,6 +42,7 @@ namespace Pinion
 		private static Dictionary<string, List<InstructionData>> instructionStringsLookup = new Dictionary<string, List<InstructionData>>();
 		private static Dictionary<string, InstructionData> internalIdentifierLookup = new Dictionary<string, InstructionData>();
 		private static StackValue[] instructionParametersReuse = new StackValue[MaxParameterCount];
+		private static IReadOnlyList<IncludeMethodByTagHandler> includeMethodsByTagHandlers = null;
 
 		// We don't do too much validation - most of this will be handled by the C-Sharp compiler anyway.
 		// Just checking we don't conflict with some internal keywords.
@@ -58,6 +59,11 @@ namespace Pinion
 			"endwhile"
 		};
 
+		static PinionAPI()
+		{
+			LoadFilters();
+		}
+
 		public static bool BuildAPI(System.Action<string> errorMessageReceiver)
 		{
 			return BuildAPI(errorMessageReceiver, false, null);
@@ -68,17 +74,7 @@ namespace Pinion
 			return BuildAPI(errorMessageReceiver, forceRebuild, null);
 		}
 
-		public static bool BuildAPI(System.Action<string> errorMessageReceiver, IncludeMethodByTagHandler includeMethodByTag)
-		{
-			return BuildAPI(errorMessageReceiver, false, includeMethodByTag);
-		}
-
-		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild, IncludeMethodByTagHandler includeMethodByTag)
-		{
-			return BuildAPI(errorMessageReceiver, forceRebuild, includeMethodByTag);
-		}
-
-		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild, IncludeMethodByTagHandler includeMethodByTag, params Type[] extraAPISources)
+		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild, params Type[] extraAPISources)
 		{
 			if (attemptedBuild && !forceRebuild)
 				return buildSuccess;
@@ -100,12 +96,6 @@ namespace Pinion
 			else
 			{
 				allAPIMethods = GetAPIMethodsFromSources(GetDiscoverableAPISources());
-			}
-
-			// If a filter was passed, only include those API methods that pass the filter.
-			if (includeMethodByTag != null)
-			{
-				allAPIMethods = allAPIMethods.Where(am => includeMethodByTag(am.Item1.Tags));
 			}
 
 			bool overallSuccess = true;
@@ -314,13 +304,26 @@ namespace Pinion
 
 			foreach (MethodInfo methodInfo in targetType.GetMethods(methodBindingFlags))
 			{
-				APIMethodAttribute methodAttribute = methodInfo.GetCustomAttribute(typeof(APIMethodAttribute), false) as APIMethodAttribute;
-
-				if (methodAttribute != null)
+				if (methodInfo.GetCustomAttribute(typeof(APIMethodAttribute), false) is APIMethodAttribute methodAttribute &&
+					MethodPassesFilters(methodAttribute))
 				{
 					yield return (methodAttribute, methodInfo);
 				}
 			}
+		}
+
+		private static bool MethodPassesFilters(APIMethodAttribute methodAttribute)
+		{
+			if (includeMethodsByTagHandlers == null)
+				return true;
+
+			foreach (IncludeMethodByTagHandler includeHandler in includeMethodsByTagHandlers)
+			{
+				if (!includeHandler(methodAttribute.Tags))
+					return false;
+			}
+
+			return true;
 		}
 
 		private static IEnumerable<Type> GetDiscoverableAPISources()
@@ -476,6 +479,33 @@ namespace Pinion
 				InstructionData data = instructionLookUpTable[instructionCode];
 				return data.isInternal ? null : data;
 			}
+		}
+
+		private static void LoadFilters()
+		{
+			Type filterProviderInterface = typeof(IPinionAPIFilterProvider);
+			IEnumerable<Type> filterProviderTypes = AppDomain.CurrentDomain.GetAssemblies()
+				.SelectMany(assembly => assembly.GetTypes())
+				.Where(type => type.GetInterfaces().Contains(filterProviderInterface));
+
+			List<IPinionAPIFilterProvider> builtFilterProviders = new List<IPinionAPIFilterProvider>();
+
+			foreach (Type filterProviderType in filterProviderTypes)
+			{
+				IPinionAPIFilterProvider filterProvider = Activator.CreateInstance(filterProviderType) as IPinionAPIFilterProvider;
+				builtFilterProviders.Add(filterProvider);
+			}
+
+			builtFilterProviders.OrderBy(f => f.ApplyOrder);
+
+			// Built by-tag method filters .
+			List<IncludeMethodByTagHandler> includeMethodByTagHandlersTemp = new List<IncludeMethodByTagHandler>();
+			foreach (IPinionAPIFilterProvider filterProvider in builtFilterProviders)
+			{
+				includeMethodByTagHandlersTemp.Add(filterProvider.GetIncludeMethodByTagHandler());
+			}
+
+			includeMethodsByTagHandlers = includeMethodByTagHandlersTemp;
 		}
 	}
 }
