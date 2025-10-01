@@ -80,7 +80,7 @@ namespace Pinion
 
 		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild, IncludeMethodByTagHandler includeMethodByTag, params Type[] extraAPISources)
 		{
-			if (attemptedBuild)
+			if (attemptedBuild && !forceRebuild)
 				return buildSuccess;
 
 			instructionStringsLookup.Clear();
