@@ -8,9 +8,16 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Pinion.Compiler.Internal;
 using Pinion.Documentation.Internal;
+using System.Linq;
 
 namespace Pinion.Documentation
 {
+	public interface IPinionDocsFilterProvider
+	{
+		public int ApplyOrder { get; }
+		public PinionAPI.IncludeMethodByTagHandler GetIncludeMethodByTagHandler();
+	}
+
 	public class DocumentationGenerator : EditorWindow
 	{
 		[SerializeField]
@@ -25,6 +32,7 @@ namespace Pinion.Documentation
 		private const string parameterNameEmphasis = "*";
 		// See BuildFriendlyTypeDictionary
 		private Dictionary<Type, string> friendlyTypeDictionary = null;
+		private static List<IPinionDocsFilterProvider> filterProviders = null;
 
 		private SerializedObject serializedObject = null;
 		private SerializedProperty propTextAddedToBeginning = null;
@@ -35,7 +43,7 @@ namespace Pinion.Documentation
 		[MenuItem("Window/Pinion/Documentation Generator")]
 		private static void ShowWindow()
 		{
-			var window = GetWindow<DocumentationGenerator>();
+			DocumentationGenerator window = GetWindow<DocumentationGenerator>();
 			window.titleContent = new GUIContent("Documentation Generator");
 			window.Show();
 		}
@@ -136,6 +144,7 @@ namespace Pinion.Documentation
 			}
 
 			List<Type> allAPISources = new List<Type>();
+			LoadFilterProviders();
 			PinionAPI.StoreDiscoverableAPISources(allAPISources);
 			List<(APIMethodAttribute, MethodInfo)> allMethodsInAPISource = new List<(APIMethodAttribute, MethodInfo)>();
 
@@ -150,6 +159,18 @@ namespace Pinion.Documentation
 			{
 				allMethodsInAPISource.Clear();
 				PinionAPI.StoreAPIMethodsForSource(source, allMethodsInAPISource);
+
+				// If any filters were provided, include only those methods that pass the filter.
+				if (filterProviders != null)
+				{
+					Debug.Log("before: " + source.Name + ": " + allMethodsInAPISource.Count);
+					foreach (IPinionDocsFilterProvider filterProvider in filterProviders)
+					{
+						PinionAPI.IncludeMethodByTagHandler includeByTagFilter = filterProvider.GetIncludeMethodByTagHandler();
+						allMethodsInAPISource.RemoveAll(m => !includeByTagFilter.Invoke(m.Item1.Tags));
+					}
+					Debug.Log("after: " + allMethodsInAPISource.Count);
+				}
 
 				if (allMethodsInAPISource.Count <= 0)
 					continue;
@@ -541,5 +562,33 @@ namespace Pinion.Documentation
 			friendlyTypeDictionary.Add(typeof(System.Single), "float");
 			friendlyTypeDictionary.Add(typeof(void), "void");
 		}
+
+		private void LoadFilterProviders()
+		{
+			Type filterProviderInterface = typeof(IPinionDocsFilterProvider);
+			IEnumerable<Type> filterProviderTypes = AppDomain.CurrentDomain.GetAssemblies()
+				.SelectMany(assembly => assembly.GetTypes())
+				.Where(type => type.GetInterfaces().Contains(filterProviderInterface));
+
+			if (filterProviders != null)
+			{
+				filterProviders.Clear();
+			}
+
+			foreach (Type filterProviderType in filterProviderTypes)
+			{
+				IPinionDocsFilterProvider filterProvider = Activator.CreateInstance(filterProviderType) as IPinionDocsFilterProvider;
+
+				if (filterProviders == null)
+				{
+					filterProviders = new List<IPinionDocsFilterProvider>();
+				}
+
+				filterProviders.Add(filterProvider);
+			}
+
+			filterProviders.OrderBy(f => f.ApplyOrder);
+		}
+
 	}
 }

@@ -19,8 +19,9 @@ namespace Pinion
 	[System.AttributeUsage(System.AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
 	public class APIMethodAttribute : System.Attribute
 	{
-		//public bool Internal { get; set; }
 		public APIMethodFlags MethodFlags { get; set; }
+
+		public string[] Tags { get; set; }
 
 		public bool HasFlag(APIMethodFlags flag)
 		{

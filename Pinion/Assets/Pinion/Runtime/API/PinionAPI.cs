@@ -24,6 +24,8 @@ namespace Pinion
 		*/
 
 		public const int MaxParameterCount = 16;
+		public delegate bool IncludeMethodByTagHandler(IReadOnlyList<string> methodTags);
+
 		private const ushort firstCustomInstructionCode = 16; // Leave some unoccupied for safety/futureproofing.
 		private static bool attemptedBuild = false;
 		private static bool buildSuccess = false;
@@ -66,7 +68,17 @@ namespace Pinion
 			return BuildAPI(errorMessageReceiver, forceRebuild, null);
 		}
 
-		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild, params Type[] extraAPISources)
+		public static bool BuildAPI(System.Action<string> errorMessageReceiver, IncludeMethodByTagHandler includeMethodByTag)
+		{
+			return BuildAPI(errorMessageReceiver, false, includeMethodByTag);
+		}
+
+		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild, IncludeMethodByTagHandler includeMethodByTag)
+		{
+			return BuildAPI(errorMessageReceiver, forceRebuild, includeMethodByTag);
+		}
+
+		public static bool BuildAPI(System.Action<string> errorMessageReceiver, bool forceRebuild, IncludeMethodByTagHandler includeMethodByTag, params Type[] extraAPISources)
 		{
 			if (attemptedBuild)
 				return buildSuccess;
@@ -88,6 +100,12 @@ namespace Pinion
 			else
 			{
 				allAPIMethods = GetAPIMethodsFromSources(GetDiscoverableAPISources());
+			}
+
+			// If a filter was passed, only include those API methods that pass the filter.
+			if (includeMethodByTag != null)
+			{
+				allAPIMethods = allAPIMethods.Where(am => includeMethodByTag(am.Item1.Tags));
 			}
 
 			bool overallSuccess = true;
@@ -227,13 +245,6 @@ namespace Pinion
 			return overallSuccess;
 		}
 
-
-
-
-
-
-
-
 		public static void CallAPIInstruction(ushort instructionCode, PinionContainer callingContainer)
 		{
 			// We do not check whether the passed instruction code is within the bounds of instructionLookupTable, because that would be wasted effort.
@@ -306,7 +317,9 @@ namespace Pinion
 				APIMethodAttribute methodAttribute = methodInfo.GetCustomAttribute(typeof(APIMethodAttribute), false) as APIMethodAttribute;
 
 				if (methodAttribute != null)
+				{
 					yield return (methodAttribute, methodInfo);
+				}
 			}
 		}
 
